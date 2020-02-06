@@ -97,6 +97,8 @@ checkout_repo() {
 
 run_script_in_repo() {
     repo="$1"
+    idx="$2"
+    total_repos="$3"
     repoPath="$WORKSPACE/$repo"
 
     # Files to stash script output into
@@ -106,7 +108,7 @@ run_script_in_repo() {
     pull_request_file=$(mktemp)
     exit_code="0"
 
-    echo "$repo: 🏃‍♀️ Running script (script output is being captured)"
+    echo "[$idx/$total_repos] $repo: 🏃‍♀️ Running script (script output is being captured)"
     # Run the script in a subshell and collect stdout, stderr, and any json result
     ( cd "$repoPath"
       # Run provided script
@@ -158,15 +160,16 @@ run_script_in_repo() {
 }
 
 map_repos() {
-    for repo in ${repos[*]} ; do
-        if ! checkout_repo "$repo" >&2; then
+    num_repos=${#repos[@]}
+    for i in "${!repos[@]}"; do
+        if ! checkout_repo "${repos[i]}" >&2; then
             echo "Error checking out $repo" >&2
-            errors[$repo]+="Error checking out $repo; can't run script"
-            exit_codes[$repo]=1
+            errors["${repos[i]}"]+="Error checking out \"${repos[i]}\"; can't run script"
+            exit_codes["${repos[i]}"]=1
             continue
         fi
 
-        run_script_in_repo "$repo"
+        run_script_in_repo "${repos[i]}" "$i" "$num_repos"
     done
 }
 
