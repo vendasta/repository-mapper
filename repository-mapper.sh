@@ -162,14 +162,15 @@ run_script_in_repo() {
 map_repos() {
     num_repos=${#repos[@]}
     for i in "${!repos[@]}"; do
-        if ! checkout_repo "${repos[i]}" >&2; then
+        repo=${repos[i]}
+        if ! checkout_repo "$repo" >&2; then
             echo "Error checking out $repo" >&2
-            errors["${repos[i]}"]+="Error checking out \"${repos[i]}\"; can't run script"
-            exit_codes["${repos[i]}"]=1
+            errors[$repo]+="Error checking out $repo; can't run script"
+            exit_codes[$repo]=1
             continue
         fi
 
-        run_script_in_repo "${repos[i]}" "$i" "$num_repos"
+        run_script_in_repo "$repo" "$i" "$num_repos"
     done
 }
 
