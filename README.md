@@ -1,5 +1,19 @@
 # Repository Mapper
 
+<!-- toc -->
+
+  * [Introduction](#introduction)
+  * [Arguments](#arguments)
+    + [Named Arguments](#named-arguments)
+    + [Positional Arguments](#positional-arguments)
+  * [Script](#script)
+  * [Example](#example)
+- [Using All Repositories](#using-all-repositories)
+
+<!-- tocstop -->
+
+## Introduction
+
 **NOTE**: Repository Mapper requires Bash version >= 4; you'll probably need to `brew install bash`.
 
 Repository Mapper can do a lot of work for you, if you provide a script it will run it on every repository you want.
