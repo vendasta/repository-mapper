@@ -45,7 +45,7 @@ Set these as environment variables when running the script:
 
 ### Positional Arguments
 
-* Repos: All positional arguments are repository names to run the script on. Simply provide the short-form name of the repo; e.g. 'accounts' or 'IAM'
+* Repos: All positional arguments are repository names to run the script on. Simply provide the short-form name of the repo; e.g. 'my-repo' or 'another-repo'
 * To use all recently updated repositories in the organization, see [using all repositories](#all-repositories).
 
 ## Script
