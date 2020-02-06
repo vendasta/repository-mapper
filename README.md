@@ -2,13 +2,14 @@
 
 <!-- toc -->
 
-  * [Introduction](#introduction)
-  * [Arguments](#arguments)
-    + [Named Arguments](#named-arguments)
-    + [Positional Arguments](#positional-arguments)
-  * [Script](#script)
-  * [Example](#example)
+- [Introduction](#introduction)
+- [Arguments](#arguments)
+  * [Named Arguments](#named-arguments)
+  * [Positional Arguments](#positional-arguments)
+- [Script](#script)
+- [Example](#example)
 - [Using All Repositories](#using-all-repositories)
+- [README Table of Contents Generation](#readme-table-of-contents-generation)
 
 <!-- tocstop -->
 
@@ -164,7 +165,11 @@ And what the results file looks like
 ]
 ```
 
-# Using All Repositories
+## Using All Repositories
 
 If you need to simply get an up-to-date list of all active repositories in your org you can run the `get-all-repos` script in the scripts directory. 
 It lists to stdout every repo in your org edited in the last year.
+
+## README Table of Contents Generation
+
+This repository uses [markdown-toc](https://github.com/jonschlinkert/markdown-toc) to generate its table of contents. Simply run `npm run regen-toc` to regenerate the table of contents in this file.
