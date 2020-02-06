@@ -2,7 +2,7 @@
 
 **NOTE**: Repository Mapper requires Bash version >= 4; you'll probably need to `brew install bash`.
 
-Repository can do a lot of work for you, if you provide a script it will run it on every repository you want.
+Repository Mapper can do a lot of work for you, if you provide a script it will run it on every repository you want.
 
 It can help with things like:
 
