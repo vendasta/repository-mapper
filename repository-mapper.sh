@@ -125,7 +125,7 @@ run_script_in_repo() {
             # Make pull request
             echo "$repo: 📝 Making Pull Request"
             hub pull-request -m "🤖 $PR_TITLE" -m "$PR_DESCRIPTION" >> "$pull_request_file"
-        ) || true # maybe there were no changed files; we'll just skip and keep moving.
+        ) >/dev/null 2>&1 || true # maybe there were no changed files; we'll just skip and keep moving.
     fi
 
     json_result=$(cat "$json_file")
