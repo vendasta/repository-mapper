@@ -53,7 +53,7 @@ Here are the currently available options:
 Set these as environment variables when running the script:
 
 * `SCRIPT` (required): A bash invocation to run. See [script](#script) below for notes on how this should work.
-* `BRANCH_NAME` (required): The branch to commit and push to; ENSURE this is UNIQUE across ALL REPOS. (don't worry it won't force-push, but it will fail to make the PR)
+* `BRANCH_NAME` (required): The working branch for the mapping process. Any repository with an existing branch of this name will have that branch clobbered locally. However, if there is an already-existing branch of that same name and `MAKE_PR=yes` is set, it will NOT produce a PR.
 * `NO_FETCH=true` (optional): Specify not to re-fetch latest master on all repos. This can speed up your script substantially, but may make PRs against an out-of-date master branch.
 * `MAKE_PR` (optional): Whether repository mapper should commit, push, and make a PR to the provided branch on Github. Set to `MAKE_PR=yes` to do so.
 * `PR_TITLE` (required if MAKE_PR=yes): The PR title
