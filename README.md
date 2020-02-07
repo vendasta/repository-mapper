@@ -1,8 +1,23 @@
 # Repository Mapper
 
+<!-- toc -->
+
+- [Introduction](#introduction)
+- [Arguments](#arguments)
+  * [Named Arguments](#named-arguments)
+  * [Positional Arguments](#positional-arguments)
+- [Script](#script)
+- [Example](#example)
+- [Using All Repositories](#using-all-repositories)
+- [README Table of Contents Generation](#readme-table-of-contents-generation)
+
+<!-- tocstop -->
+
+## Introduction
+
 **NOTE**: Repository Mapper requires Bash version >= 4; you'll probably need to `brew install bash`.
 
-Repository can do a lot of work for you, if you provide a script it will run it on every repository you want.
+Repository Mapper can do a lot of work for you, if you provide a script it will run it on every repository you want.
 
 It can help with things like:
 
@@ -38,7 +53,7 @@ Here are the currently available options:
 Set these as environment variables when running the script:
 
 * `SCRIPT` (required): A bash invocation to run. See [script](#script) below for notes on how this should work.
-* `BRANCH_NAME` (required): The branch to commit and push to; ENSURE this is UNIQUE across ALL REPOS. (don't worry it won't force-push, but it will fail to make the PR)
+* `BRANCH_NAME` (required): The working branch for the mapping process. Any repository with an existing branch of this name will have that branch clobbered locally. However, if there is an already-existing branch of that same name and `MAKE_PR=yes` is set, it will NOT produce a PR.
 * `NO_FETCH=true` (optional): Specify not to re-fetch latest master on all repos. This can speed up your script substantially, but may make PRs against an out-of-date master branch.
 * `MAKE_PR` (optional): Whether repository mapper should commit, push, and make a PR to the provided branch on Github. Set to `MAKE_PR=yes` to do so.
 * `PR_TITLE` (required if MAKE_PR=yes): The PR title
@@ -150,7 +165,11 @@ And what the results file looks like
 ]
 ```
 
-# Using All Repositories
+## Using All Repositories
 
 If you need to simply get an up-to-date list of all active repositories in your org you can run the `get-all-repos` script in the scripts directory. 
 It lists to stdout every repo in your org edited in the last year.
+
+## README Table of Contents Generation
+
+This repository uses [markdown-toc](https://github.com/jonschlinkert/markdown-toc) to generate its table of contents. Simply run `npm run regen-toc` to regenerate the table of contents in this file.
