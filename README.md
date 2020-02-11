@@ -1,4 +1,4 @@
-# Repository Mapper (Open Source)
+# Repository Mapper (Open Sourcg)
 
 <!-- toc -->
 
@@ -9,7 +9,6 @@
 - [Script](#script)
 - [Example](#example)
 - [Using All Repositories](#using-all-repositories)
-- [README Table of Contents Generation](#readme-table-of-contents-generation)
 
 <!-- tocstop -->
 
