@@ -1,4 +1,4 @@
-# Repository Mapper
+# Repository Mapper (Open Source)
 
 <!-- toc -->
 
