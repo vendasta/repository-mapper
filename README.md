@@ -21,25 +21,24 @@ Repository Mapper can do a lot of work for you, if you provide a script it will 
 
 It can help with things like:
 
-* Running structured queries on every repository
-  - E.g. "Which repositories still use 'go dep'?"
-  - E.g. "How many repositories still depend on X version of this package?"
-  - E.g. "Find me all usages of the term "X" across all repositories
+* Running structured queries on every repository, E.g.
+  - Which repositories still use 'go dep'?
+  - How many repositories still depend on X version of this package?
+  - Find me all usages of the term 'X' across all repositories
+  - Which users contribute to which repositories?
 
-* Running scripts and creating pull requests on every repository
-  - E.g. Auto upgrade X dependency in every repository
-  - E.g. Add this LICENCE file to every repository
+* Running scripts and creating pull requests on every repository. E.g.
+  - Auto upgrade X dependency in every repository
+  - Add this LICENCE file to every repository
 
 Let's look at an example invocation to break it down.
 
 ```bash
-MAKE_PR=yes \
-  PR_TITLE="Upgrade SDK" \
-  PR_DESCRIPTION="This is a critical upgrade" \
-  BRANCH_NAME="repository-mapper/upgrade-sdk" \
-  SCRIPT="./upgrade-sdk.sh" \
-  ./repository-mapper.sh \
-  repo1 repo2 repo3
+ORG=vendasta \
+ NO_FETCH=true \
+ BRANCH_NAME=repository-mapper/contributors \
+ SCRIPT="$(realpath ./scripts/get-contributors.sh)" \
+ ./repository-mapper.sh repo1 repo2 repo3
 ```
 
 Let's break it down.
@@ -52,25 +51,28 @@ Here are the currently available options:
 
 Set these as environment variables when running the script:
 
+* `ORG` (required): The Github Organization where your repositories are stored.
 * `SCRIPT` (required): A bash invocation to run. See [script](#script) below for notes on how this should work.
-* `BRANCH_NAME` (required): The working branch for the mapping process. Any repository with an existing branch of this name will have that branch clobbered locally. However, if there is an already-existing branch of that same name and `MAKE_PR=yes` is set, it will NOT produce a PR.
-* `NO_FETCH=true` (optional): Specify not to re-fetch latest master on all repos. This can speed up your script substantially, but may make PRs against an out-of-date master branch.
+* `BRANCH_NAME` (required): The working branch for the mapping process. Any repository with an existing branch of this name will have that branch clobbered locally. However, if there is an already-existing branch of that same name on the remote and `MAKE_PR=yes` is set, it will not force push, nor will it make a PR.
+* `NO_FETCH=true` (optional): Specify not to re-fetch latest master on all repos. This can speed up your script substantially, but means the working copy of each repo may be out of date.
 * `MAKE_PR` (optional): Whether repository mapper should commit, push, and make a PR to the provided branch on Github. Set to `MAKE_PR=yes` to do so.
 * `PR_TITLE` (required if MAKE_PR=yes): The PR title
 * `PR_DESCRIPTION` (required if MAKE_PR=yes): The PR description
 
 ### Positional Arguments
 
-* Repos: All positional arguments are repository names to run the script on. Simply provide the short-form name of the repo; e.g. 'my-repo' or 'another-repo'
+* Repos: All positional arguments are repository names to run the script on. Simply provide the short-form name of the repo; e.g. 'my-repo' or 'another-repo'. The organization name will automatically be appended.
 * To use all recently updated repositories in the organization, see [using all repositories](#all-repositories).
 
 ## Script
 
-The provided script will be run as a bash script with `bash -c`
+The provided script will be run using `bash -c "$SCRIPT"` from within the root of each directory. This means that all references to files should use absolute paths.
 
 All stdout, stderr, and exit code will automatically be collected for you.
 
-If a script returns exit code `10` it will 'skip' the repository, meaning it will not create a commit or pull request in that repository.
+If a script returns a non-zero exit code, repository mapper will not create a commit or pull request in that repository.
+
+You can exit a script with exit code `10` to "skip" the repository and signify there's no work to be done.
 
 Optionally, if you want to store more structured results you can write a **single** JSON results object to file descriptor 3 within your script and it will be added to the collected results.
 
@@ -86,12 +88,25 @@ echo "This is what an error looks like" >&2
 exit 42
 ```
 
-Here's a script which gets the list of contributors from each repo as a JSON array.
+This will result in the result object:
+
+```json
+{
+    "repo": "my-repo",
+    "stdout": "Hello; let me get those files for you!",
+    "stderr": "This is what an error looks like",
+    "exit_code": 42,
+    "pull_request": "",
+    "result": ["file-1.txt", "file-2.txt"]
+  }
+```
+
+Here's a script which gets the list of contributors from each repo as a JSON array. You can find this inside `./scripts/get-contributors.sh`
 
 ```bash
 #!/bin/bash
 contributors=$(git shortlog --summary --numbered --email | cut -f2)
-numContributors=$(echo contributors | wc -l)
+numContributors=$(echo "$contributors" | wc -l)
 
 jq -n --argjson "numContributors" "$numContributors" --arg "contributors" "$contributors" '{numContributors: $numContributors, contributors: $contributors | split("\n")}' >&3
 ```
@@ -101,20 +116,25 @@ jq -n --argjson "numContributors" "$numContributors" --arg "contributors" "$cont
 Example command
 
 ```bash
-$ BRANCH_NAME=repository-mapper/contributors SCRIPT="$(realpath ./scripts/get-contributors.sh)" ./repository-mapper.sh repo1 repo2
-repo1: 🦴🐕 Fetching latest master
-repo1: 🏃‍♀️ Running script
-repo1: ✅ SUCCESS
+$ ORG=vendasta \
+   NO_FETCH=true \
+   BRANCH_NAME=repository-mapper/contributors \
+   SCRIPT="$(realpath ./scripts/get-contributors.sh)" \
+   ./repository-mapper.sh repo1 repo2
 
-repo2: 🦴🐕 Fetching latest master
-repo2: 🏃‍♀️ Running script
-repo2: ✅ SUCCESS
+[1/2] repo1: 🦴🐕 Fetching latest master
+[1/2] repo1: 🏃‍♀️ Running script
+[1/2] repo1: ✅ SUCCESS
+
+[2/2] repo2: 🦴🐕 Fetching latest master
+[2/2] repo2: 🏃‍♀️ Running script
+[2/2] repo2: ✅ SUCCESS
 
 ===============
 ✅ SUCCEEDED ✅
 ===============
-notifications
-email
+repo1
+repo2
 
 =============
 ⏭  SKIPPED ⏭
