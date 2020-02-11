@@ -189,7 +189,3 @@ And what the results file looks like
 
 If you need to simply get an up-to-date list of all active repositories in your org you can run the `get-all-repos` script in the scripts directory. 
 It lists to stdout every repo in your org edited in the last year.
-
-## README Table of Contents Generation
-
-This repository uses [markdown-toc](https://github.com/jonschlinkert/markdown-toc) to generate its table of contents. Simply run `npm run regen-toc` to regenerate the table of contents in this file.
