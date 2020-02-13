@@ -170,7 +170,7 @@ map_repos() {
             continue
         fi
 
-        run_script_in_repo "$repo" "$i" "$num_repos"
+        run_script_in_repo "$repo" "$(($i + 1))" "$num_repos"
     done
 }
 
