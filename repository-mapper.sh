@@ -43,9 +43,11 @@ fi
 
 if [[ "$MAKE_PR" = "yes" ]]; then
    pull_requests=$(mktemp)
-   if ! command -v hub >/dev/null 2>&1; then
-      echo "hub is required to make PR's" >&2
-      echo "brew install hub" >&2
+   if ! command -v gh >/dev/null 2>&1; then
+      echo "github cli is required to make PR's" >&2
+      echo "brew install github/gh/gh" >&2
+      echo "Ensure you've authorized it to make pull requests" >&2
+      echo "try running 'gh issue list' to see if it succeeds" >&2
       exit 1
    fi
 
@@ -121,11 +123,15 @@ run_script_in_repo() {
             git add -A
             git commit -m "$PR_TITLE" -m "$PR_DESCRIPTION"
             # Push branch
-            git push -u origin HEAD
+            git push -u origin HEAD || exit_code="$?"
+            if [[ $exit_code -eq 1 ]]; then
+                echo "Git push failed, are you sure your branch name doesn't exist on the remote?" >&2
+                exit 1
+            fi
             # Make pull request
             echo "$repo: 📝 Making Pull Request"
-            hub pull-request -m "🤖 $PR_TITLE" -m "$PR_DESCRIPTION" >> "$pull_request_file"
-        ) >/dev/null 2>&1 || true # maybe there were no changed files; we'll just skip and keep moving.
+            gh pr create -t "🤖 $PR_TITLE" -b "$PR_DESCRIPTION" >> "$pull_request_file"
+        ) || true # maybe there were no changed files; we'll just print errors and keep moving.
     fi
 
     json_result=$(cat "$json_file")
