@@ -15,3 +15,4 @@ for f in $go_mod_files ; do
     fi
   )
 done
+exit 10
