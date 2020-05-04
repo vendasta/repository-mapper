@@ -82,7 +82,7 @@ checkout_repo() {
     # Clone if missing
     if ! [[ -d "$repoPath" ]]; then
        echo "$repo: 🧘‍♂️ Cloning (this could take a while...)"
-       git clone "git@github.com:$ORG/$repo" "$repoPath"
+       git clone "git@github.com:$ORG/$repo" "$repoPath" --depth 1
     fi
 
     # create new branch from latest master
