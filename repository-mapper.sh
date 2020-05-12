@@ -87,8 +87,10 @@ checkout_repo() {
 
     # create new branch from latest master
     (
+      # exit on failure
+      set -x
       cd "$repoPath"
-      if [[ -z $NO_FETCH ]]; then  
+      if [[ -z $NO_FETCH ]]; then
           echo "$repo: 🦴🐕 Fetching latest master"
           git fetch origin master >/dev/null 2>&1
       fi
@@ -112,13 +114,18 @@ run_script_in_repo() {
 
     echo "[$idx/$total_repos] $repo: 🏃‍♀️ Running script (script output is being captured)"
     # Run the script in a subshell and collect stdout, stderr, and any json result
-    ( cd "$repoPath"
+    (
+    # Exit on failure
+    set -x
+    cd "$repoPath"
       # Run provided script
       bash -c "$SCRIPT"
     ) > "$out_file" 2> "$err_file" 3> "$json_file" || exit_code="$?"
 
     if [[ "$MAKE_PR" = "yes" ]] && [[ $exit_code -eq 0 ]]; then
         (
+        # Exit on failure
+        set -x
         cd "$repoPath"
             git add -A
             git commit -m "$PR_TITLE" -m "$PR_DESCRIPTION"
@@ -196,36 +203,36 @@ collect_results() {
             --argjson "exit_code" "${exit_codes[$repo]:-1}" \
             '. + [ {repo: $repo, stdout: $stdout, stderr: $stderr, exit_code: $exit_code, pull_request: $pull_request, result: $result} ]')"
   done
-  
+
   results_file="./results/${BRANCH_NAME}.json"
   mkdir -p "./results/$(dirname "$BRANCH_NAME")"
   echo "$results" > "$results_file"
-  
+
   echo ""
   echo "==============="
   echo "✅ SUCCEEDED ✅"
   echo "==============="
-  jq -r '.[] | select(.exit_code == 0) | .repo' < "$results_file" 
-  
+  jq -r '.[] | select(.exit_code == 0) | .repo' < "$results_file"
+
   echo ""
   echo "============="
   echo "⏭  SKIPPED ⏭ "
   echo "============="
-  jq -r ".[] | select(.exit_code == $SKIP_EXIT_CODE) | .repo" < "$results_file" 
-  
+  jq -r ".[] | select(.exit_code == $SKIP_EXIT_CODE) | .repo" < "$results_file"
+
   echo ""
   echo "============"
   echo "🚨 FAILED 🚨"
   echo "============"
-  jq -r ".[] | select(.exit_code != 0 and .exit_code != $SKIP_EXIT_CODE) | .repo" < "$results_file" 
-  
-  
+  jq -r ".[] | select(.exit_code != 0 and .exit_code != $SKIP_EXIT_CODE) | .repo" < "$results_file"
+
+
   if [[ "$MAKE_PR" = "yes" ]]; then
       echo ""
       echo "==================="
       echo "📝 Pull Requests 📝"
       echo "==================="
-      jq -r '.[] | select(.pull_request and .pull_request != "") | "\(.repo): \(.pull_request)"' < "$results_file" 
+      jq -r '.[] | select(.pull_request and .pull_request != "") | "\(.repo): \(.pull_request)"' < "$results_file"
   fi
 
   echo ""
