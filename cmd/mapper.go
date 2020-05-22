@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,7 +13,8 @@ import (
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport"
-	git_auth "github.com/go-git/go-git/v5/plumbing/transport/http"
+
+	git_ssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 
 	"github.com/spf13/cobra"
 )
@@ -31,11 +33,13 @@ var (
 
 	skipExitCode   = 10
 	githubTokenKey = "GITHUB_TOKEN"
+	homeDir        string
 )
 
 func init() {
 	usr, _ := user.Current()
-	workspace = filepath.Join(usr.HomeDir, "repository-mapper")
+	homeDir = usr.HomeDir
+	workspace = filepath.Join(homeDir, "repository-mapper")
 
 	rootCmd.Flags().StringVarP(&branchName, "branch-name", "b", "", "The branch to create. Should be globally unique.")
 	rootCmd.MarkFlagRequired("branch-name")
@@ -81,7 +85,10 @@ func run(cmd *cobra.Command, args []string) {
 		allResults[repoName] = results
 	}
 	summarizeResults(allResults)
-	saveResults(allResults)
+	err = saveResults(allResults)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error saving results: %s\n", err.Error())
+	}
 }
 
 func summarizeResults(allResults map[string]*runResults) {
@@ -118,7 +125,15 @@ func summarizeResults(allResults map[string]*runResults) {
 	}
 }
 
-func saveResults(allResults map[string]*runResults) {}
+func saveResults(allResults map[string]*runResults) error {
+	os.MkdirAll("./results", os.ModePerm)
+	fp := filepath.Join(".", "results", branchName+".json")
+	data, err := json.Marshal(allResults)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(fp, data, os.ModePerm)
+}
 
 func logResults(r *runResults) {
 	switch r.ExitCode {
@@ -127,7 +142,6 @@ func logResults(r *runResults) {
 		if r.PullRequest != "" {
 			fmt.Printf("%s: Pull Request: %s\n", r.Repo, r.PullRequest)
 		}
-		fmt.Printf("%s: ✅ SUCCESS\n", r.Repo)
 	case skipExitCode:
 		fmt.Printf("%s: ⏭  SKIPPED\n", r.Repo)
 	default:
@@ -152,15 +166,15 @@ func runRepo(repoName string) (*runResults, error) {
 		return nil, err
 	}
 
-	err = checkoutBranch(repo)
+	err = checkoutBranch(repoName, repo)
 	if err != nil {
 		return nil, err
 	}
 
-	stdout, stderr, exitCode, err := runScriptInRepo(repoPath)
+	stdout, stderr, exitCode, err := runScriptInRepo(repoName, repoPath)
 	var prURL string
 	if makePr && exitCode == 0 {
-		prURL, err = makePullRequest(repo)
+		prURL, err = makePullRequest(repoName, repo)
 		if err != nil {
 			return nil, err
 		}
@@ -176,7 +190,7 @@ func runRepo(repoName string) (*runResults, error) {
 	return r, nil
 }
 
-func makePullRequest(repo *git.Repository) (string, error) {
+func makePullRequest(repoName string, repo *git.Repository) (string, error) {
 	wt, err := repo.Worktree()
 	if err != nil {
 		return "", err
@@ -201,16 +215,17 @@ func makePullRequest(repo *git.Repository) (string, error) {
 	return string(prURL), nil
 }
 
-func runScriptInRepo(repoPath string) (stdoutBytes []byte, stderrBytes []byte, exitCode int, err error) {
+func runScriptInRepo(repoName, repoPath string) (stdoutBytes []byte, stderrBytes []byte, exitCode int, err error) {
 	scriptCmd := exec.Command(script)
 	scriptCmd.Dir = repoPath
 	stdout, _ := scriptCmd.StdoutPipe()
 	stderr, _ := scriptCmd.StderrPipe()
 
+	fmt.Printf("%s: 🏃‍♂️ Running script\n", repoName)
 	// Run synchronously, can probably switch to async later
 	err = scriptCmd.Run()
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, 0, fmt.Errorf("Error running script: %s", err.Error())
 	}
 
 	stdoutBytes, err = ioutil.ReadAll(stdout)
@@ -224,31 +239,50 @@ func runScriptInRepo(repoPath string) (stdoutBytes []byte, stderrBytes []byte, e
 	return stdoutBytes, stderrBytes, scriptCmd.ProcessState.ExitCode(), nil
 }
 
-func checkoutBranch(repo *git.Repository) error {
+func checkoutBranch(repoName string, repo *git.Repository) error {
 	wt, err := repo.Worktree()
 	if err != nil {
 		return err
 	}
 
-	masterRef, err := repo.Reference("origin/master", true)
+	masterRef, err := repo.Reference(plumbing.NewBranchReferenceName("origin/master"), true)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error getting reference: %s", err.Error())
 	}
+
+	_, err = repo.Reference(plumbing.NewBranchReferenceName(branchName), false)
 	if err == nil {
+		checkoutOpts := &git.CheckoutOptions{
+			Branch: plumbing.NewBranchReferenceName(branchName),
+			Force:  true,
+			Keep:   false,
+		}
+		err = wt.Checkout(checkoutOpts)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("%s: Resetting branch to latest master\n", repoName)
 		resetOpts := &git.ResetOptions{
 			Commit: masterRef.Hash(),
 			Mode:   git.HardReset,
 		}
-		return wt.Reset(resetOpts)
+		err = wt.Reset(resetOpts)
+		if err != nil {
+			return fmt.Errorf("Error resetting branch: %s", err.Error())
+		}
+		return nil
 	}
 
+	fmt.Printf("Error getting branch: %s\n", err.Error())
 	checkoutOpts := &git.CheckoutOptions{
 		Hash:   masterRef.Hash(),
-		Branch: plumbing.ReferenceName(branchName),
+		Branch: plumbing.NewBranchReferenceName(branchName),
 		Create: true,
 		Force:  true,
 		Keep:   false,
 	}
+
+	fmt.Printf("%s: Creating new branch\n", repoName)
 	err = wt.Checkout(checkoutOpts)
 	if err != nil {
 		return err
@@ -295,10 +329,14 @@ func initAuth() error {
 	if githubToken == "" {
 		return fmt.Errorf("GITHUB_TOKEN is unset. Create and export a developer token for the provided user")
 	}
-	auth = &git_auth.BasicAuth{
-		Username: githubUsername,
-		Password: githubToken,
+	var err error
+
+	rsaKeyFile := filepath.Join(homeDir, ".ssh", "id_rsa")
+	auth, err = git_ssh.NewPublicKeysFromFile("git", rsaKeyFile, "")
+	if err != nil {
+		return err
 	}
+
 	return nil
 }
 
@@ -318,21 +356,19 @@ func checkoutRepo(repoName string, repoPath string) (repo *git.Repository, err e
 		if err != nil {
 			return nil, err
 		}
-		fmt.Printf("%#v", auth)
 		if !noFetch {
-			fmt.Printf("%s: Fetching latest master\n", repoName)
+			fmt.Printf("%s: Fetching latest master (could take a minute) ⏱\n", repoName)
 			opts := &git.FetchOptions{
 				RemoteName: "origin",
 				Depth:      1,
 				Auth:       auth,
 			}
 			err = repo.Fetch(opts)
-			if err != nil {
+			if err != nil && err != git.NoErrAlreadyUpToDate {
 				return nil, fmt.Errorf("Error fetching: %s", err.Error())
 			}
 		}
 		return repo, nil
-
 	} else {
 		return cloneRepo(repoName, repoPath)
 	}
@@ -351,7 +387,7 @@ func cloneRepo(repoName string, dest string) (*git.Repository, error) {
 	}
 	repo, err := git.PlainClone(dest, false, cloneOptions)
 	if err != nil {
-		return nil, fmt.Errorf("%s: Error cloning repository: %s", repoName, err.Error())
+		return nil, fmt.Errorf("Error cloning repository: %s", err.Error())
 	}
 	return repo, nil
 }
