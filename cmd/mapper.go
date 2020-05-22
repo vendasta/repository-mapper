@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -218,8 +219,9 @@ func makePullRequest(repoName string, repo *git.Repository) (string, error) {
 func runScriptInRepo(repoName, repoPath string) (stdoutBytes []byte, stderrBytes []byte, exitCode int, err error) {
 	scriptCmd := exec.Command(script)
 	scriptCmd.Dir = repoPath
-	stdout, _ := scriptCmd.StdoutPipe()
-	stderr, _ := scriptCmd.StderrPipe()
+	var stdout, stderr *bytes.Buffer
+	scriptCmd.Stdout = stdout
+	scriptCmd.Stderr = stderr
 
 	fmt.Printf("%s: 🏃‍♂️ Running script\n", repoName)
 	// Run synchronously, can probably switch to async later
@@ -245,7 +247,7 @@ func checkoutBranch(repoName string, repo *git.Repository) error {
 		return err
 	}
 
-	masterRef, err := repo.Reference(plumbing.NewBranchReferenceName("origin/master"), true)
+	masterRef, err := repo.Reference(plumbing.NewBranchReferenceName("master"), true)
 	if err != nil {
 		return fmt.Errorf("Error getting reference: %s", err.Error())
 	}
