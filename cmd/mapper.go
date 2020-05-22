@@ -29,12 +29,12 @@ var (
 	description    string
 	noFetch        bool
 	workspace      string
-	githubUsername string
 	auth           transport.AuthMethod
+	rsaKeyFile     string
+	rsaKeyPassword string
 
-	skipExitCode   = 10
-	githubTokenKey = "GITHUB_TOKEN"
-	homeDir        string
+	skipExitCode = 10
+	homeDir      string
 )
 
 func init() {
@@ -50,11 +50,13 @@ func init() {
 	rootCmd.Flags().StringVarP(&script, "script", "s", "", "Path to the script to run in each repository")
 	rootCmd.MarkFlagRequired("script")
 
-	rootCmd.Flags().StringVarP(&githubUsername, "username", "u", "", "Github username")
-	rootCmd.MarkFlagRequired("username")
 	rootCmd.Flags().StringVarP(&title, "title", "t", "", "Title of the PR")
 	rootCmd.Flags().StringVarP(&description, "description", "d", "", "Description of the PR")
 
+	defaultRSAKeyFile := filepath.Join(homeDir, ".ssh", "id_rsa")
+	rootCmd.Flags().StringVarP(&rsaKeyFile, "rsa-key-file", "r", defaultRSAKeyFile, "(optional) The location of an rsa key with github permissions")
+
+	rootCmd.Flags().StringVarP(&rsaKeyPassword, "rsa-key-password", "p", "", "(optional) The password for your ssh key if you have one configured")
 }
 
 var rootCmd = &cobra.Command{
@@ -333,15 +335,8 @@ func validateArgs() error {
 	return nil
 }
 
-func initAuth() error {
-	githubToken := os.Getenv(githubTokenKey)
-	if githubToken == "" {
-		return fmt.Errorf("GITHUB_TOKEN is unset. Create and export a developer token for the provided user")
-	}
-	var err error
-
-	rsaKeyFile := filepath.Join(homeDir, ".ssh", "id_rsa")
-	auth, err = git_ssh.NewPublicKeysFromFile("git", rsaKeyFile, "")
+func initAuth() (err error) {
+	auth, err = git_ssh.NewPublicKeysFromFile("git", rsaKeyFile, rsaKeyPassword)
 	if err != nil {
 		return err
 	}
