@@ -148,7 +148,9 @@ func logResults(r *runResults) {
 	default:
 		fmt.Printf("%s: 🚨 FAILED, exited with %d\n", r.Repo, r.ExitCode)
 		errLines := strings.Split(r.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "%s: Error: %s...\n", r.Repo, errLines[0])
+		if errLines[0] != "" {
+			fmt.Fprintf(os.Stderr, "%s: Error: %s...\n", r.Repo, errLines[0])
+		}
 	}
 }
 
@@ -173,6 +175,9 @@ func runRepo(repoName string) (*runResults, error) {
 	}
 
 	stdout, stderr, exitCode, err := runScriptInRepo(repoName, repoPath)
+	if err != nil {
+		return nil, err
+	}
 	var prURL string
 	if makePr && exitCode == 0 {
 		prURL, err = makePullRequest(repoName, repo)
@@ -219,14 +224,16 @@ func makePullRequest(repoName string, repo *git.Repository) (string, error) {
 func runScriptInRepo(repoName, repoPath string) (stdoutBytes []byte, stderrBytes []byte, exitCode int, err error) {
 	scriptCmd := exec.Command(script)
 	scriptCmd.Dir = repoPath
-	var stdout, stderr *bytes.Buffer
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
 	scriptCmd.Stdout = stdout
 	scriptCmd.Stderr = stderr
 
 	fmt.Printf("%s: 🏃‍♂️ Running script\n", repoName)
 	// Run synchronously, can probably switch to async later
 	err = scriptCmd.Run()
-	if err != nil {
+	// err is returned on non-zero script exit codes, so we check specifically for something OTHER than an ExitError
+	if _, ok := err.(*exec.ExitError); err != nil && !ok {
 		return nil, nil, 0, fmt.Errorf("Error running script: %s", err.Error())
 	}
 
