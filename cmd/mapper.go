@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strings"
 
 	"github.com/golang/glog"
 	// git "github.com/libgit2/git2go/v30"
@@ -75,30 +76,69 @@ func run(cmd *cobra.Command, args []string) {
 		logResults(results)
 		allResults[repoName] = results
 	}
-
+	summarizeResults(allResults)
+	saveResults(allResults)
 }
 
-func logResults(r *runResults) {
-	switch r.exitCode {
-	case 0:
-		glog.Infof("%s: ✅ SUCCESS", r.repoName)
-		if r.prURL != "" {
-			glog.Infof("%s: Pull Request: %s", r.repoName, r.prURL)
+func summarizeResults(allResults map[string]*runResults) {
+	var successes, skips, failures []*runResults
+	for _, result := range allResults {
+		switch result.ExitCode {
+		case 0:
+			successes = append(successes, result)
+		case skipExitCode:
+			skips = append(skips, result)
+		default:
+			failures = append(failures, result)
 		}
-		glog.Infof("%s: ✅ SUCCESS", r.repoName)
+	}
+
+	glog.Info("===============")
+	glog.Info("✅ SUCCEEDED ✅")
+	glog.Info("===============")
+	for _, r := range successes {
+		glog.Infof("%s %s", r.Repo, r.PullRequest)
+	}
+	glog.Info("===============")
+	glog.Info("⏭  SKIPPED ⏭ ")
+	glog.Info("===============")
+	for _, r := range skips {
+		glog.Infof("%s %s", r.Repo)
+	}
+
+	glog.Info("===============")
+	glog.Info("🚨 FAILED 🚨")
+	glog.Info("===============")
+	for _, r := range failures {
+		glog.Infof("%s %s", r.Repo)
+	}
+}
+
+func saveResults(allResults map[string]*runResults) {}
+
+func logResults(r *runResults) {
+	switch r.ExitCode {
+	case 0:
+		glog.Infof("%s: ✅ SUCCESS", r.Repo)
+		if r.PullRequest != "" {
+			glog.Infof("%s: Pull Request: %s", r.Repo, r.PullRequest)
+		}
+		glog.Infof("%s: ✅ SUCCESS", r.Repo)
 	case skipExitCode:
-		glog.Infof("%s: ⏭  SKIPPED", r.repoName)
+		glog.Infof("%s: ⏭  SKIPPED", r.Repo)
 	default:
-		glog.Infof("%s: 🚨 FAILED, exited with %d", r.repoName, r.exitCode)
+		glog.Infof("%s: 🚨 FAILED, exited with %d", r.Repo, r.ExitCode)
+		errLines := strings.Split(r.Stderr, "\n")
+		glog.Errorf("%s: Error: %s...", r.Repo, errLines[0])
 	}
 }
 
 type runResults struct {
-	repoName string
-	stdout   string
-	stderr   string
-	exitCode int
-	prURL    string
+	Repo        string `json:"repo"`
+	Stdout      string `json:"stdout"`
+	Stderr      string `json:"stderr"`
+	ExitCode    int    `json:"exitCode"`
+	PullRequest string `json:"pullRequest"`
 }
 
 func runRepo(repoName string) (*runResults, error) {
@@ -123,11 +163,11 @@ func runRepo(repoName string) (*runResults, error) {
 	}
 
 	r := &runResults{
-		repoName: repoName,
-		exitCode: exitCode,
-		stdout:   string(stdout),
-		stderr:   string(stderr),
-		prURL:    prURL,
+		Repo:        repoName,
+		ExitCode:    exitCode,
+		Stdout:      string(stdout),
+		Stderr:      string(stderr),
+		PullRequest: prURL,
 	}
 	return r, nil
 }
@@ -143,6 +183,7 @@ func makePullRequest(repo *git.Repository) (string, error) {
 		return "", err
 	}
 
+	glog.Info("📝 Making Pull Request")
 	prCmd := exec.Command("gh", "pr", "create", "-t", title, "-b", description)
 	stdout, err := prCmd.StdoutPipe()
 	if err != nil {
