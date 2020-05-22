@@ -315,9 +315,13 @@ func cloneRepo(repoName string, dest string) (*git.Repository, error) {
 	fmt.Printf("%s: 🧘‍♂️ Cloning (this could take a while...)\n", repoName)
 	githubRepoURL := fmt.Sprintf("git@github.com:%s/%s", org, repoName)
 
-	// Should probably set some clone options here for convenience and safety
-	// TODO: set clone depth = 1
-	repo, err := git.PlainClone(githubRepoURL, false, nil)
+	cloneOptions := &git.CloneOptions{
+		URL:           githubRepoURL,
+		ReferenceName: "master",
+		SingleBranch:  true,
+		Depth:         1,
+	}
+	repo, err := git.PlainClone(dest, false, cloneOptions)
 	if err != nil {
 		return nil, fmt.Errorf("%s: Error cloning repository: %s", repoName, err.Error())
 	}
