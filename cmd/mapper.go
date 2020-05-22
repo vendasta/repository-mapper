@@ -9,13 +9,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/golang/glog"
-	// git "github.com/libgit2/git2go/v30"
 	git "github.com/go-git/go-git/v5"
+	gitconfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 
 	"github.com/spf13/cobra"
-	// "github.com/libgit2/git2go/v30"
 )
 
 var (
@@ -63,14 +61,14 @@ func run(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	glog.Infof("Using script: %s", script)
+	fmt.Printf("Using script: %s\n", script)
 
 	allResults := map[string]*runResults{}
 
 	for _, repoName := range args {
 		results, err := runRepo(repoName)
 		if err != nil {
-			glog.Errorf("%s: %s", repoName, err.Error())
+			fmt.Fprintf(os.Stderr, "%s: %s\n", repoName, err.Error())
 			continue
 		}
 		logResults(results)
@@ -93,24 +91,24 @@ func summarizeResults(allResults map[string]*runResults) {
 		}
 	}
 
-	glog.Info("===============")
-	glog.Info("✅ SUCCEEDED ✅")
-	glog.Info("===============")
+	fmt.Println("===============")
+	fmt.Println("✅ SUCCEEDED ✅")
+	fmt.Println("===============")
 	for _, r := range successes {
-		glog.Infof("%s %s", r.Repo, r.PullRequest)
+		fmt.Printf("%s %s\n", r.Repo, r.PullRequest)
 	}
-	glog.Info("===============")
-	glog.Info("⏭  SKIPPED ⏭ ")
-	glog.Info("===============")
+	fmt.Println("===============")
+	fmt.Println("⏭  SKIPPED ⏭ ")
+	fmt.Println("===============")
 	for _, r := range skips {
-		glog.Infof("%s %s", r.Repo)
+		fmt.Print(r.Repo)
 	}
 
-	glog.Info("===============")
-	glog.Info("🚨 FAILED 🚨")
-	glog.Info("===============")
+	fmt.Println("===============")
+	fmt.Println("🚨 FAILED 🚨")
+	fmt.Println("===============")
 	for _, r := range failures {
-		glog.Infof("%s %s", r.Repo)
+		fmt.Print(r.Repo)
 	}
 }
 
@@ -119,17 +117,17 @@ func saveResults(allResults map[string]*runResults) {}
 func logResults(r *runResults) {
 	switch r.ExitCode {
 	case 0:
-		glog.Infof("%s: ✅ SUCCESS", r.Repo)
+		fmt.Printf("%s: ✅ SUCCESS\n", r.Repo)
 		if r.PullRequest != "" {
-			glog.Infof("%s: Pull Request: %s", r.Repo, r.PullRequest)
+			fmt.Printf("%s: Pull Request: %s\n", r.Repo, r.PullRequest)
 		}
-		glog.Infof("%s: ✅ SUCCESS", r.Repo)
+		fmt.Printf("%s: ✅ SUCCESS\n", r.Repo)
 	case skipExitCode:
-		glog.Infof("%s: ⏭  SKIPPED", r.Repo)
+		fmt.Printf("%s: ⏭  SKIPPED\n", r.Repo)
 	default:
-		glog.Infof("%s: 🚨 FAILED, exited with %d", r.Repo, r.ExitCode)
+		fmt.Printf("%s: 🚨 FAILED, exited with %d\n", r.Repo, r.ExitCode)
 		errLines := strings.Split(r.Stderr, "\n")
-		glog.Errorf("%s: Error: %s...", r.Repo, errLines[0])
+		fmt.Fprintf(os.Stderr, "%s: Error: %s...\n", r.Repo, errLines[0])
 	}
 }
 
@@ -183,7 +181,7 @@ func makePullRequest(repo *git.Repository) (string, error) {
 		return "", err
 	}
 
-	glog.Info("📝 Making Pull Request")
+	fmt.Println("📝 Making Pull Request")
 	prCmd := exec.Command("gh", "pr", "create", "-t", title, "-b", description)
 	stdout, err := prCmd.StdoutPipe()
 	if err != nil {
@@ -221,18 +219,25 @@ func runScriptInRepo(repoPath string) (stdoutBytes []byte, stderrBytes []byte, e
 }
 
 func checkoutBranch(repo *git.Repository) error {
-	head, err := repo.Head()
-	if err != nil {
-		return err
-	}
-
 	wt, err := repo.Worktree()
 	if err != nil {
 		return err
 	}
 
+	masterRef, err := repo.Reference("origin/master", true)
+	if err != nil {
+		return err
+	}
+	if err == nil {
+		resetOpts := &git.ResetOptions{
+			Commit: masterRef.Hash(),
+			Mode:   git.HardReset,
+		}
+		return wt.Reset(resetOpts)
+	}
+
 	checkoutOpts := &git.CheckoutOptions{
-		Hash:   head.Hash(),
+		Hash:   masterRef.Hash(),
 		Branch: plumbing.ReferenceName(branchName),
 		Create: true,
 		Force:  true,
@@ -284,14 +289,30 @@ func isDir(p string) bool {
 
 func checkoutRepo(repoName string, repoPath string) (repo *git.Repository, err error) {
 	if isDir(repoPath) {
-		return git.PlainOpen(repoPath)
+		repo, err = git.PlainOpen(repoPath)
+		if err != nil {
+			return nil, err
+		}
+		if !noFetch {
+			opts := &git.FetchOptions{
+				RemoteName: "origin",
+				Depth:      1,
+				RefSpecs:   []gitconfig.RefSpec{"master"},
+			}
+			err = repo.Fetch(opts)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return repo, nil
+
 	} else {
 		return cloneRepo(repoName, repoPath)
 	}
 }
 
 func cloneRepo(repoName string, dest string) (*git.Repository, error) {
-	glog.Info("%s: 🧘‍♂️ Cloning (this could take a while...)", repoName)
+	fmt.Printf("%s: 🧘‍♂️ Cloning (this could take a while...)\n", repoName)
 	githubRepoURL := fmt.Sprintf("git@github.com:%s/%s", org, repoName)
 
 	// Should probably set some clone options here for convenience and safety
