@@ -10,23 +10,27 @@ import (
 	"strings"
 
 	git "github.com/go-git/go-git/v5"
-	gitconfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	git_auth "github.com/go-git/go-git/v5/plumbing/transport/http"
 
 	"github.com/spf13/cobra"
 )
 
 var (
-	branchName  string
-	org         string
-	script      string
-	makePr      bool
-	title       string
-	description string
-	noFetch     bool
-	workspace   string
+	branchName     string
+	org            string
+	script         string
+	makePr         bool
+	title          string
+	description    string
+	noFetch        bool
+	workspace      string
+	githubUsername string
+	auth           transport.AuthMethod
 
-	skipExitCode = 10
+	skipExitCode   = 10
+	githubTokenKey = "GITHUB_TOKEN"
 )
 
 func init() {
@@ -41,6 +45,8 @@ func init() {
 	rootCmd.Flags().StringVarP(&script, "script", "s", "", "Path to the script to run in each repository")
 	rootCmd.MarkFlagRequired("script")
 
+	rootCmd.Flags().StringVarP(&githubUsername, "username", "u", "", "Github username")
+	rootCmd.MarkFlagRequired("username")
 	rootCmd.Flags().StringVarP(&title, "title", "t", "", "Title of the PR")
 	rootCmd.Flags().StringVarP(&description, "description", "d", "", "Description of the PR")
 
@@ -267,6 +273,11 @@ func validateArgs() error {
 		return err
 	}
 
+	err = initAuth()
+	if err != nil {
+		return err
+	}
+
 	if makePr {
 		if title == "" {
 			return fmt.Errorf("A PR title is required")
@@ -279,6 +290,18 @@ func validateArgs() error {
 	return nil
 }
 
+func initAuth() error {
+	githubToken := os.Getenv(githubTokenKey)
+	if githubToken == "" {
+		return fmt.Errorf("GITHUB_TOKEN is unset. Create and export a developer token for the provided user")
+	}
+	auth = &git_auth.BasicAuth{
+		Username: githubUsername,
+		Password: githubToken,
+	}
+	return nil
+}
+
 func isDir(p string) bool {
 	info, err := os.Stat(p)
 	if err != nil {
@@ -288,20 +311,24 @@ func isDir(p string) bool {
 }
 
 func checkoutRepo(repoName string, repoPath string) (repo *git.Repository, err error) {
+	fmt.Printf("%s: Checking out at %s\n", repoName, repoPath)
 	if isDir(repoPath) {
+		fmt.Printf("%s: Repository exists\n", repoName)
 		repo, err = git.PlainOpen(repoPath)
 		if err != nil {
 			return nil, err
 		}
+		fmt.Printf("%#v", auth)
 		if !noFetch {
+			fmt.Printf("%s: Fetching latest master\n", repoName)
 			opts := &git.FetchOptions{
 				RemoteName: "origin",
 				Depth:      1,
-				RefSpecs:   []gitconfig.RefSpec{"master"},
+				Auth:       auth,
 			}
 			err = repo.Fetch(opts)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("Error fetching: %s", err.Error())
 			}
 		}
 		return repo, nil
@@ -313,13 +340,14 @@ func checkoutRepo(repoName string, repoPath string) (repo *git.Repository, err e
 
 func cloneRepo(repoName string, dest string) (*git.Repository, error) {
 	fmt.Printf("%s: 🧘‍♂️ Cloning (this could take a while...)\n", repoName)
-	githubRepoURL := fmt.Sprintf("git@github.com:%s/%s", org, repoName)
+	githubRepoURL := fmt.Sprintf("https://github.com/%s/%s", org, repoName)
 
 	cloneOptions := &git.CloneOptions{
 		URL:           githubRepoURL,
 		ReferenceName: "master",
 		SingleBranch:  true,
 		Depth:         1,
+		Auth:          auth,
 	}
 	repo, err := git.PlainClone(dest, false, cloneOptions)
 	if err != nil {

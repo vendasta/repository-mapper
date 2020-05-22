@@ -1,3 +1,4 @@
 node_modules/**
 /repo-list
 /results
+test.sh
