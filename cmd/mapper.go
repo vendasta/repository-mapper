@@ -22,6 +22,7 @@ import (
 )
 
 var (
+	// cli flags
 	branchName     string
 	org            string
 	script         string
@@ -34,11 +35,14 @@ var (
 	rsaKeyFile     string
 	rsaKeyPassword string
 
+	// constants
 	skipExitCode = 10
 	homeDir      string
 )
 
+// Initialize cobra cli flags and args
 func init() {
+	// Get the current system user so we can find their home dir
 	usr, _ := user.Current()
 	homeDir = usr.HomeDir
 	workspace = filepath.Join(homeDir, "repository-mapper")
@@ -51,23 +55,25 @@ func init() {
 	rootCmd.Flags().StringVarP(&script, "script", "s", "", "Path to the script to run in each repository")
 	rootCmd.MarkFlagRequired("script")
 
+	rootCmd.Flags().BoolVarP(&makePr, "make-pr", "p", false, "Create a PR in each repo after running the script")
 	rootCmd.Flags().StringVarP(&title, "title", "t", "", "Title of the PR")
 	rootCmd.Flags().StringVarP(&description, "description", "d", "", "Description of the PR")
 
 	defaultRSAKeyFile := filepath.Join(homeDir, ".ssh", "id_rsa")
-	rootCmd.Flags().StringVarP(&rsaKeyFile, "rsa-key-file", "r", defaultRSAKeyFile, "(optional) The location of an rsa key with github permissions")
-
-	rootCmd.Flags().StringVarP(&rsaKeyPassword, "rsa-key-password", "p", "", "(optional) The password for your ssh key if you have one configured")
+	rootCmd.Flags().StringVar(&rsaKeyFile, "rsa-key-file", defaultRSAKeyFile, "(optional) The location of an rsa key with github permissions")
+	rootCmd.Flags().StringVar(&rsaKeyPassword, "rsa-key-password", "", "(optional) The password for your ssh key if you have one configured")
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "repository-mapper",
-	Short: "Run scripts on repositories across your org",
-	Long:  `Run scripts and queries on repositories across your org`,
-	Args:  cobra.MinimumNArgs(1),
-	RunE:  run,
+	Use:          "repository-mapper",
+	Short:        "Run scripts on repositories across your org",
+	Long:         `Run scripts and queries on repositories across your org`,
+	Args:         cobra.MinimumNArgs(1),
+	RunE:         run,
+	SilenceUsage: true,
 }
 
+// The main command logic
 func run(cmd *cobra.Command, args []string) error {
 	err := validateArgs()
 	if err != nil {
@@ -78,16 +84,25 @@ func run(cmd *cobra.Command, args []string) error {
 
 	allResults := map[string]*runResults{}
 
+	// Run each repo in serial
+	// Could pretty easily allow running in parallel if we wanted to
 	for _, repoName := range args {
+		// Defer to the per-repo operations (i.e. cloning, git-ops, running script)
 		results, err := runRepo(repoName)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s: %s\n", repoName, err.Error())
 			continue
 		}
+		// Print out the results for this repo
 		logResults(results)
+		// Stash results for summary
 		allResults[repoName] = results
 	}
+
+	// Print out summary of all repo results
 	summarizeResults(allResults)
+
+	// Save detailed result print out to disk
 	err = saveResults(allResults)
 	if err != nil {
 		return fmt.Errorf("Error saving results: %s\n", err.Error())
@@ -95,6 +110,7 @@ func run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// Print all the results to console
 func summarizeResults(allResults map[string]*runResults) {
 	var successes, skips, failures []*runResults
 	for _, result := range allResults {
@@ -132,6 +148,7 @@ func summarizeResults(allResults map[string]*runResults) {
 }
 
 func saveResults(allResults map[string]*runResults) error {
+	// Ensure results dir exists
 	os.MkdirAll("./results", os.ModePerm)
 	fp := filepath.Join(".", "results", branchName+".json")
 	data, err := json.Marshal(allResults)
@@ -142,10 +159,11 @@ func saveResults(allResults map[string]*runResults) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Results written to %s\n", fp)
+	fmt.Printf("Results written to ./%s\n", fp)
 	return nil
 }
 
+// Log results from a single repo run
 func logResults(r *runResults) {
 	switch r.ExitCode {
 	case 0:
@@ -164,6 +182,7 @@ func logResults(r *runResults) {
 	}
 }
 
+// Results from a single repo run
 type runResults struct {
 	Repo        string `json:"repo"`
 	Stdout      string `json:"stdout"`
@@ -172,6 +191,7 @@ type runResults struct {
 	PullRequest string `json:"pullRequest"`
 }
 
+// Perform all necessary tasks for a single repo
 func runRepo(repoName string) (*runResults, error) {
 	repoPath := filepath.Join(workspace, repoName)
 	repo, err := checkoutRepo(repoName, repoPath)
@@ -179,16 +199,20 @@ func runRepo(repoName string) (*runResults, error) {
 		return nil, err
 	}
 
+	// Checkout the desired branch name tracking from latest master
 	err = checkoutBranch(repoName, repo)
 	if err != nil {
 		return nil, err
 	}
 
+	// Run the script inside the repo
 	stdout, stderr, exitCode, err := runScriptInRepo(repoName, repoPath)
 	if err != nil {
 		return nil, err
 	}
+
 	var prURL string
+	// Only make a PR if the script succeeded and the flag is set
 	if makePr && exitCode == 0 {
 		prURL, err = makePullRequest(repoName, repo)
 		if err != nil {
@@ -206,6 +230,7 @@ func runRepo(repoName string) (*runResults, error) {
 	return r, nil
 }
 
+// Make a pull request (requires the `gh` cli tool)
 func makePullRequest(repoName string, repo *git.Repository) (string, error) {
 	wt, err := repo.Worktree()
 	if err != nil {
@@ -292,7 +317,6 @@ func checkoutBranch(repoName string, repo *git.Repository) error {
 		return nil
 	}
 
-	fmt.Printf("Error getting branch: %s\n", err.Error())
 	checkoutOpts := &git.CheckoutOptions{
 		Hash:   masterRef.Hash(),
 		Branch: plumbing.NewBranchReferenceName(branchName),
@@ -311,7 +335,6 @@ func checkoutBranch(repoName string, repo *git.Repository) error {
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
 		os.Exit(1)
 	}
 }
@@ -332,6 +355,10 @@ func validateArgs() error {
 	}
 
 	if makePr {
+		_, err := exec.LookPath("asldkfj")
+		if err != nil {
+			return fmt.Errorf("The github cli is required to make a pull request. Please run:\nbrew install github/gh/gh")
+		}
 		if title == "" {
 			return fmt.Errorf("A PR title is required")
 		}
