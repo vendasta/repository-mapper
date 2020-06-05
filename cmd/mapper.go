@@ -167,7 +167,7 @@ func saveResults(allResults map[string]*runResults) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Results written to ./%s\n", fp)
+	fmt.Printf("Job results (and stdout/stderr transcripts) available in ./%s\n", fp)
 	return nil
 }
 
