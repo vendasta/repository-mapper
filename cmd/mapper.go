@@ -65,14 +65,13 @@ var rootCmd = &cobra.Command{
 	Short: "Run scripts on repositories across your org",
 	Long:  `Run scripts and queries on repositories across your org`,
 	Args:  cobra.MinimumNArgs(1),
-	Run:   run,
+	RunE:  run,
 }
 
-func run(cmd *cobra.Command, args []string) {
+func run(cmd *cobra.Command, args []string) error {
 	err := validateArgs()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
+		return err
 	}
 
 	fmt.Printf("Using script: %s\n", script)
@@ -91,8 +90,9 @@ func run(cmd *cobra.Command, args []string) {
 	summarizeResults(allResults)
 	err = saveResults(allResults)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error saving results: %s\n", err.Error())
+		return fmt.Errorf("Error saving results: %s\n", err.Error())
 	}
+	return nil
 }
 
 func summarizeResults(allResults map[string]*runResults) {
