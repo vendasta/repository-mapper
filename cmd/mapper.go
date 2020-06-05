@@ -9,11 +9,14 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"time"
 
 	git "github.com/go-git/go-git/v5"
 	gitconfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
+	gitobject "github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 
 	git_ssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
@@ -36,8 +39,13 @@ var (
 	rsaKeyPassword string
 
 	// constants
-	skipExitCode = 10
-	homeDir      string
+	skipExitCode   = 10
+	homeDir        string
+	gitAuthor      string
+	gitAuthorEmail string
+
+	// Regex
+	linkRegex = regexp.MustCompile(`\S+://\S+`)
 )
 
 // Initialize cobra cli flags and args
@@ -234,13 +242,29 @@ func runRepo(repoName string) (*runResults, error) {
 func makePullRequest(repoPath string, repo *git.Repository) (string, error) {
 	wt, err := repo.Worktree()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Error getting worktree: %s", err.Error())
 	}
 
 	// Add all changed files
 	_, err = wt.Add(".")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Error adding changes: %s", err.Error())
+	}
+
+	commiter := &gitobject.Signature{
+		Name:  gitAuthor,
+		Email: gitAuthorEmail,
+		When:  time.Now().UTC(),
+	}
+	// Commit changes
+	commitOpts := &git.CommitOptions{
+		Author:    commiter,
+		Committer: commiter,
+	}
+	fmt.Println("📝 Committing Changes")
+	_, err = wt.Commit(title, commitOpts)
+	if err != nil {
+		return "", fmt.Errorf("Error committing changes: %s", err.Error())
 	}
 
 	fmt.Println("📝 Making Pull Request")
@@ -266,7 +290,8 @@ func makePullRequest(repoPath string, repo *git.Repository) (string, error) {
 		return "", fmt.Errorf("Error creating PR\nYou may need to authorize gh in a separate terminal first.\n%s\n%s", cmdErr.Error(), string(stderrBytes))
 	}
 
-	return string(stdoutBytes), nil
+	prLinkBytes := linkRegex.Find(stdoutBytes)
+	return string(prLinkBytes), nil
 }
 
 func runScriptInRepo(repoName, repoPath string) (stdoutBytes []byte, stderrBytes []byte, exitCode int, err error) {
@@ -377,6 +402,19 @@ func validateArgs() error {
 		}
 		if description == "" {
 			return fmt.Errorf("A PR description is required. Pass one with -d")
+		}
+		getAuthorCmd := exec.Command("git", "config", "user.name")
+		authorBytes, err := getAuthorCmd.Output()
+		gitAuthor = strings.TrimSpace(string(authorBytes))
+		if err != nil || gitAuthor == "" {
+			gitAuthor = "Unknown"
+		}
+
+		getAuthorEmailCmd := exec.Command("git", "config", "user.email")
+		authorEmailBytes, err := getAuthorEmailCmd.Output()
+		gitAuthorEmail = strings.TrimSpace(string(authorEmailBytes))
+		if err != nil || gitAuthorEmail == "" {
+			return fmt.Errorf("Error getting author email: %s", err.Error())
 		}
 	}
 
