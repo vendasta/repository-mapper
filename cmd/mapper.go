@@ -222,7 +222,7 @@ func runRepo(repoName string) (*runResults, error) {
 	var prURL string
 	// Only make a PR if the script succeeded and the flag is set
 	if makePr && exitCode == 0 {
-		prURL, err = makePullRequest(repoPath, repo)
+		prURL, err = makePullRequest(repoName, repoPath, repo)
 		if err != nil {
 			return nil, err
 		}
@@ -239,7 +239,7 @@ func runRepo(repoName string) (*runResults, error) {
 }
 
 // Make a pull request (requires the `gh` cli tool)
-func makePullRequest(repoPath string, repo *git.Repository) (string, error) {
+func makePullRequest(repoName string, repoPath string, repo *git.Repository) (string, error) {
 	wt, err := repo.Worktree()
 	if err != nil {
 		return "", fmt.Errorf("Error getting worktree: %s", err.Error())
@@ -261,13 +261,13 @@ func makePullRequest(repoPath string, repo *git.Repository) (string, error) {
 		Author:    commiter,
 		Committer: commiter,
 	}
-	fmt.Println("📝 Committing Changes")
+	fmt.Printf("%s: 📝 Committing Changes\n", repoName)
 	_, err = wt.Commit(title, commitOpts)
 	if err != nil {
 		return "", fmt.Errorf("Error committing changes: %s", err.Error())
 	}
 
-	fmt.Println("📝 Making Pull Request")
+	fmt.Printf("%s: 📝 Making Pull Request\n", repoName)
 	prCmd := exec.Command("gh", "pr", "create", "-t", "🤖 "+title, "-b", description)
 	prCmd.Dir = repoPath
 
