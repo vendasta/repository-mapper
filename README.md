@@ -1,14 +1,13 @@
 # Repository Mapper (Open Source)
 
-<!-- toc -->
+<!-- toc GFM -->
 
-- [Introduction](#introduction)
-- [Arguments](#arguments)
-  * [Named Arguments](#named-arguments)
-  * [Positional Arguments](#positional-arguments)
-- [Script](#script)
-- [Example](#example)
-- [Using All Repositories](#using-all-repositories)
+* [Introduction](#introduction)
+* [Installation](#installation)
+* [Usage](#usage)
+* [Arguments](#arguments)
+* [Script](#script)
+* [Using All Repositories](#using-all-repositories)
 
 <!-- tocstop -->
 
@@ -27,6 +26,14 @@ It can help with things like:
 * Running scripts and creating pull requests on every repository. E.g.
   - Auto upgrade X dependency in every repository
   - Add this LICENCE file to every repository
+
+## Installation
+
+```go
+go get github.com/vendasta/repository-mapper
+```
+
+## Usage
 
 Let's look at an example invocation to break it down.
 
@@ -64,10 +71,9 @@ Flags:
   -t, --title string              Title of the PR
 ```
 
-### Positional Arguments
+Pass as many repositories as you like as positional arguments. Simply provide the short-form name of the repo; e.g. 'my-repo' or 'another-repo'. The organization name will automatically be appended.
 
-* Repos: All positional arguments are repository names to run the script on. Simply provide the short-form name of the repo; e.g. 'my-repo' or 'another-repo'. The organization name will automatically be appended.
-* To use all recently updated repositories in the organization, see [using all repositories](#all-repositories).
+To use all recently updated repositories in the organization, see [using all repositories](#all-repositories).
 
 ## Script
 
