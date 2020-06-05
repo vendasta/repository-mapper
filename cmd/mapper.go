@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	git "github.com/go-git/go-git/v5"
+	gitconfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 
@@ -107,25 +108,27 @@ func summarizeResults(allResults map[string]*runResults) {
 		}
 	}
 
-	fmt.Println("===============")
+	fmt.Println("\n===============")
 	fmt.Println("✅ SUCCEEDED ✅")
 	fmt.Println("===============")
 	for _, r := range successes {
 		fmt.Printf("%s %s\n", r.Repo, r.PullRequest)
 	}
-	fmt.Println("===============")
+	fmt.Println("\n===============")
 	fmt.Println("⏭  SKIPPED ⏭ ")
 	fmt.Println("===============")
 	for _, r := range skips {
-		fmt.Print(r.Repo)
+		fmt.Println(r.Repo)
 	}
 
-	fmt.Println("===============")
+	fmt.Println("\n===============")
 	fmt.Println("🚨 FAILED 🚨")
 	fmt.Println("===============")
 	for _, r := range failures {
-		fmt.Print(r.Repo)
+		fmt.Println(r.Repo)
 	}
+	// spacer
+	fmt.Println("")
 }
 
 func saveResults(allResults map[string]*runResults) error {
@@ -135,7 +138,12 @@ func saveResults(allResults map[string]*runResults) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(fp, data, os.ModePerm)
+	err = ioutil.WriteFile(fp, data, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Results written to %s\n", fp)
+	return nil
 }
 
 func logResults(r *runResults) {
@@ -366,6 +374,8 @@ func checkoutRepo(repoName string, repoPath string) (repo *git.Repository, err e
 				RemoteName: "origin",
 				Depth:      1,
 				Auth:       auth,
+				// Fetch only latest master
+				RefSpecs: []gitconfig.RefSpec{"+refs/heads/master:refs/remotes/origin/master"},
 			}
 			err = repo.Fetch(opts)
 			if err != nil && err != git.NoErrAlreadyUpToDate {
