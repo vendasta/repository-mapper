@@ -214,7 +214,7 @@ func runRepo(repoName string) (*runResults, error) {
 	var prURL string
 	// Only make a PR if the script succeeded and the flag is set
 	if makePr && exitCode == 0 {
-		prURL, err = makePullRequest(repoName, repo)
+		prURL, err = makePullRequest(repoPath, repo)
 		if err != nil {
 			return nil, err
 		}
@@ -231,29 +231,42 @@ func runRepo(repoName string) (*runResults, error) {
 }
 
 // Make a pull request (requires the `gh` cli tool)
-func makePullRequest(repoName string, repo *git.Repository) (string, error) {
+func makePullRequest(repoPath string, repo *git.Repository) (string, error) {
 	wt, err := repo.Worktree()
 	if err != nil {
 		return "", err
 	}
 
+	// Add all changed files
 	_, err = wt.Add(".")
 	if err != nil {
 		return "", err
 	}
 
 	fmt.Println("📝 Making Pull Request")
-	prCmd := exec.Command("gh", "pr", "create", "-t", title, "-b", description)
-	stdout, err := prCmd.StdoutPipe()
+	prCmd := exec.Command("gh", "pr", "create", "-t", "🤖 "+title, "-b", description)
+	prCmd.Dir = repoPath
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	prCmd.Stdout = stdout
+	prCmd.Stderr = stderr
+
+	cmdErr := prCmd.Run()
+	stdoutBytes, err := ioutil.ReadAll(stdout)
 	if err != nil {
 		return "", err
 	}
-	prURL, err := ioutil.ReadAll(stdout)
+	stderrBytes, err := ioutil.ReadAll(stderr)
 	if err != nil {
 		return "", err
 	}
 
-	return string(prURL), nil
+	if cmdErr != nil {
+		return "", fmt.Errorf("Error creating PR\nYou may need to authorize gh in a separate terminal first.\n%s\n%s", cmdErr.Error(), string(stderrBytes))
+	}
+
+	return string(stdoutBytes), nil
 }
 
 func runScriptInRepo(repoName, repoPath string) (stdoutBytes []byte, stderrBytes []byte, exitCode int, err error) {
@@ -355,15 +368,15 @@ func validateArgs() error {
 	}
 
 	if makePr {
-		_, err := exec.LookPath("asldkfj")
+		_, err := exec.LookPath("gh")
 		if err != nil {
 			return fmt.Errorf("The github cli is required to make a pull request. Please run:\nbrew install github/gh/gh")
 		}
 		if title == "" {
-			return fmt.Errorf("A PR title is required")
+			return fmt.Errorf("A PR title is required. Pass one with -t")
 		}
 		if description == "" {
-			return fmt.Errorf("A PR description is required")
+			return fmt.Errorf("A PR description is required. Pass one with -d")
 		}
 	}
 
