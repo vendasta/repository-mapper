@@ -18,6 +18,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	gitobject "github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
 	git_ssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 
@@ -37,6 +38,9 @@ var (
 	auth           transport.AuthMethod
 	rsaKeyFile     string
 	rsaKeyPassword string
+
+	userName  string
+	authToken string
 
 	// constants
 	skipExitCode   = 10
@@ -67,9 +71,12 @@ func init() {
 	rootCmd.Flags().StringVarP(&title, "title", "t", "", "Title of the PR")
 	rootCmd.Flags().StringVarP(&description, "description", "d", "", "Description of the PR")
 
-	defaultRSAKeyFile := filepath.Join(homeDir, ".ssh", "id_rsa")
-	rootCmd.Flags().StringVar(&rsaKeyFile, "rsa-key-file", defaultRSAKeyFile, "(optional) The location of an rsa key with github permissions")
-	rootCmd.Flags().StringVar(&rsaKeyPassword, "rsa-key-password", "", "(optional) The password for your ssh key if you have one configured")
+	//defaultRSAKeyFile := filepath.Join(homeDir, ".ssh", "id_rsa")
+	//rootCmd.Flags().StringVar(&rsaKeyFile, "rsa-key-file", defaultRSAKeyFile, "(optional) The location of an rsa key with github permissions")
+	//rootCmd.Flags().StringVar(&rsaKeyPassword, "rsa-key-password", "", "(optional) The password for your ssh key if you have one configured")
+
+	rootCmd.Flags().StringVar(&userName, "user-name", "", "Github user name")
+	rootCmd.Flags().StringVar(&authToken, "auth-token", "", "Github auth token")
 }
 
 var rootCmd = &cobra.Command{
@@ -422,9 +429,17 @@ func validateArgs() error {
 }
 
 func initAuth() (err error) {
-	auth, err = git_ssh.NewPublicKeysFromFile("git", rsaKeyFile, rsaKeyPassword)
-	if err != nil {
-		return err
+	if userName != "" && authToken != "" {
+		auth = &http.BasicAuth{
+			Username: userName,
+			Password: authToken,
+		}
+	} else {
+		auth, err = git_ssh.NewPublicKeysFromFile("git", rsaKeyFile, rsaKeyPassword)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	return nil
@@ -470,9 +485,10 @@ func cloneRepo(repoName string, dest string) (*git.Repository, error) {
 	fmt.Printf("%s: 🧘‍♂️ Cloning (this could take a while...)\n", repoName)
 	githubRepoURL := fmt.Sprintf("https://github.com/%s/%s", org, repoName)
 
+	fmt.Println(githubRepoURL)
 	cloneOptions := &git.CloneOptions{
 		URL:           githubRepoURL,
-		ReferenceName: "master",
+		ReferenceName: plumbing.NewBranchReferenceName("master"),
 		SingleBranch:  true,
 		Depth:         1,
 		Auth:          auth,
