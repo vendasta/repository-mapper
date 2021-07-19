@@ -71,9 +71,9 @@ func init() {
 	rootCmd.Flags().StringVarP(&title, "title", "t", "", "Title of the PR")
 	rootCmd.Flags().StringVarP(&description, "description", "d", "", "Description of the PR")
 
-	//defaultRSAKeyFile := filepath.Join(homeDir, ".ssh", "id_rsa")
-	//rootCmd.Flags().StringVar(&rsaKeyFile, "rsa-key-file", defaultRSAKeyFile, "(optional) The location of an rsa key with github permissions")
-	//rootCmd.Flags().StringVar(&rsaKeyPassword, "rsa-key-password", "", "(optional) The password for your ssh key if you have one configured")
+	defaultRSAKeyFile := filepath.Join(homeDir, ".ssh", "id_rsa")
+	rootCmd.Flags().StringVar(&rsaKeyFile, "rsa-key-file", defaultRSAKeyFile, "(optional) The location of an rsa key with github permissions, works only with linux and windows")
+	rootCmd.Flags().StringVar(&rsaKeyPassword, "rsa-key-password", "", "(optional) The password for your ssh key if you have one configured, works only with linux and windows")
 
 	rootCmd.Flags().StringVar(&userName, "user-name", "", "Github user name")
 	rootCmd.Flags().StringVar(&authToken, "auth-token", "", "Github auth token")
@@ -484,8 +484,6 @@ func checkoutRepo(repoName string, repoPath string) (repo *git.Repository, err e
 func cloneRepo(repoName string, dest string) (*git.Repository, error) {
 	fmt.Printf("%s: 🧘‍♂️ Cloning (this could take a while...)\n", repoName)
 	githubRepoURL := fmt.Sprintf("https://github.com/%s/%s", org, repoName)
-
-	fmt.Println(githubRepoURL)
 	cloneOptions := &git.CloneOptions{
 		URL:           githubRepoURL,
 		ReferenceName: plumbing.NewBranchReferenceName("master"),

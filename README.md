@@ -61,15 +61,17 @@ Usage:
   repository-mapper [flags] repos...
 
 Flags:
-      --auth-token string    Github auth token
-  -b, --branch-name string   The branch to create. Should be globally unique.
-  -d, --description string   Description of the PR
-  -h, --help                 help for repository-mapper
-  -p, --make-pr              Create a PR in each repo after running the script
-  -o, --org string           The github organization the repos live in. (default "vendasta")
-  -s, --script string        Path to the script to run in each repository
-  -t, --title string         Title of the PR
-      --user-name string     Github user name
+      --auth-token string         Github auth token
+  -b, --branch-name string        The branch to create. Should be globally unique.
+  -d, --description string        Description of the PR
+  -h, --help                      help for repository-mapper
+  -p, --make-pr                   Create a PR in each repo after running the script
+  -o, --org string                The github organization the repos live in. (default "vendasta")
+      --rsa-key-file string       (optional) The location of an rsa key with github permissions, note this doesn't work currently (default "/Users/jbaxter/.ssh/id_rsa")
+      --rsa-key-password string   (optional) The password for your ssh key if you have one configured, note this doesn't work currently
+  -s, --script string             Path to the script to run in each repository
+  -t, --title string              Title of the PR
+      --user-name string          Github user name
   
 ```
 
@@ -78,6 +80,8 @@ Pass as many repositories as you like as positional arguments. Simply provide th
 To use all recently updated repositories in the organization, see [using all repositories](#all-repositories).
 
 ### Auth
+
+*Note* RSA based auth does not work on Apple Laptops
 
 Currently we need to use a github username and auth token to authenticate the repo mapper, to generate an auth token see [this article](https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token)
 
