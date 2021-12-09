@@ -40,7 +40,7 @@ Let's look at an example invocation to break it down.
 ```bash
 repository-mapper \
   --org=vendasta \
-  --branch=mapper/contributors \
+  --branch-name=mapper/contributors \
   --script=./test.sh \
   --user-name="foo@vendasta.com" \
   --auth-token="auth-token" \
@@ -88,6 +88,8 @@ Currently we need to use a github username and auth token to authenticate the re
 ## Script
 
 The provide script can be any executable. It will be run without any arguments at the root of each repository.
+
+The script must be executable in order for repository-mapper to run it, eg `chmod +x myscript.sh`
 
 All stdout, stderr, and exit code will automatically be collected for you and will be recorded into the json file which is written after each run.
 
