@@ -4,3 +4,5 @@ SDK_VERSION=$(cat go.mod | grep "github.com/vendasta/gosdks/logging" | awk '{pri
 echo "Logging SDK version on master: ${SDK_VERSION}"
 sed -i '' 's|.*github.com/vendasta/gosdks/logging.*|\tgithub.com/vendasta/gosdks/logging v1.12.0|' go.mod
 echo "Logging SDK version for PR   : ${SDK_VERSION}"
+
+go mod vendor
