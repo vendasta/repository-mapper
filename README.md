@@ -77,7 +77,7 @@ Flags:
 
 Pass as many repositories as you like as positional arguments. Simply provide the short-form name of the repo; e.g. 'my-repo' or 'another-repo'. The organization name will automatically be appended.
 
-To use all recently updated repositories in the organization, see [using all repositories](#all-repositories).
+To use all recently updated repositories in the organization, see [using all repositories](#using-all-repositories).
 
 ### Auth
 
