@@ -81,7 +81,7 @@ To use all recently updated repositories in the organization, see [using all rep
 
 ### Auth
 
-*Note* RSA based auth does not work on Apple Laptops
+*Note* RSA based auth does not work on Apple Laptops. To run the script on an Apple laptop you **must** add the `--user-name` and `--auth-token` flags on the commandline. It is helpful to set an environment variable for each of these in your `~/.bashrc` or `~/.zshrc` file.
 
 Currently we need to use a github username and auth token to authenticate the repo mapper, to generate an auth token see [this article](https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token)
 
