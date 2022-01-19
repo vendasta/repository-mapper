@@ -20,7 +20,8 @@ else
     go mod vendor
     actual=$(sdk_file_version)
     echo "$sdk_name version on PR is: $actual"
-
+    git add .
+    git commit -m "update event-broker sdk"
   else
       echo "Repo doesn't use $sdk_name"
   fi
