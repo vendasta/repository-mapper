@@ -16,7 +16,7 @@ else
   then
     actual=$(sdk_file_version)
     echo "$sdk_name version on master is: $actual"
-    go get github.com/vendasta/event-broker/sdks/go@v1.3.0
+    go get github.com/vendasta/event-broker/sdks/go@v1.4.0
     go mod vendor
     actual=$(sdk_file_version)
     echo "$sdk_name version on PR is: $actual"
