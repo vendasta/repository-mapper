@@ -2,7 +2,7 @@
 
 file_name=./go.mod
 sdk_name=github.com/vendasta/event-broker/sdks/go
-
+gh --version
 sdk_file_version() {
     grep $sdk_name $file_name | awk '{print $2}'
 }
@@ -20,10 +20,9 @@ else
     go mod vendor
     actual=$(sdk_file_version)
     echo "$sdk_name version on PR is: $actual"
-    git add .
-    git commit -m "update event-broker sdk"
   else
       echo "Repo doesn't use $sdk_name"
+      exit 10
   fi
 fi
 
