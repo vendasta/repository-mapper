@@ -274,6 +274,18 @@ func makePullRequest(repoName string, repoPath string, repo *git.Repository) (st
 		return "", fmt.Errorf("Error committing changes: %s", err.Error())
 	}
 
+	// Push to origin
+	pushOpts := &git.PushOptions{
+		RemoteName: "origin",
+		Auth:       auth,
+	}
+	fmt.Printf("%s: Setting upstream origin to %s\n", repoName, branchName)
+	err = repo.Push(pushOpts)
+	if err != nil {
+		return "", fmt.Errorf("Error during push: %s", err.Error())
+	}
+
+	//create pull request
 	fmt.Printf("%s: 📝 Making Pull Request\n", repoName)
 	prCmd := exec.Command("gh", "pr", "create", "-t", "🤖 "+title, "-b", description, "-H", branchName)
 	prCmd.Dir = repoPath
