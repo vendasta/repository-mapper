@@ -286,6 +286,7 @@ func makePullRequest(repoName string, repoPath string, repo *git.Repository) (st
 	}
 
 	//create pull request
+	// TODO: replace gh's command usage with  https://github.com/cli/go-gh
 	fmt.Printf("%s: 📝 Making Pull Request\n", repoName)
 	prCmd := exec.Command("gh", "pr", "create", "-t", "🤖 "+title, "-b", description, "-H", branchName)
 	prCmd.Dir = repoPath
