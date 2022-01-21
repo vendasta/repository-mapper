@@ -2,7 +2,7 @@
 
 file_name=./go.mod
 sdk_name=github.com/vendasta/event-broker/sdks/go
-gh --version
+
 sdk_file_version() {
     grep $sdk_name $file_name | awk '{print $2}'
 }
