@@ -307,7 +307,7 @@ func makePullRequest(repoName string, repoPath string, repo *git.Repository) (st
 	}
 
 	if cmdErr != nil {
-		return "", fmt.Errorf("Error creating PR. \nEnsure you've tested gh in a separate terminal first, and then resolve the following errros: \n%s\n%s", cmdErr.Error(), string(stderrBytes))
+		return "", fmt.Errorf("Error creating PR. \nEnsure you've tested gh in a separate terminal first, and then resolve the following errors: \n%s\n%s", cmdErr.Error(), string(stderrBytes))
 	}
 
 	prLinkBytes := linkRegex.Find(stdoutBytes)
