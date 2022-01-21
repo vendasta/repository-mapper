@@ -274,8 +274,21 @@ func makePullRequest(repoName string, repoPath string, repo *git.Repository) (st
 		return "", fmt.Errorf("Error committing changes: %s", err.Error())
 	}
 
+	// Push to origin
+	pushOpts := &git.PushOptions{
+		RemoteName: "origin",
+		Auth:       auth,
+	}
+	fmt.Printf("%s: Setting upstream origin to %s\n", repoName, branchName)
+	err = repo.Push(pushOpts)
+	if err != nil {
+		return "", fmt.Errorf("Error during push: %s", err.Error())
+	}
+
+	//create pull request
+	// TODO: replace gh's command usage with  https://github.com/cli/go-gh
 	fmt.Printf("%s: 📝 Making Pull Request\n", repoName)
-	prCmd := exec.Command("gh", "pr", "create", "-t", "🤖 "+title, "-b", description)
+	prCmd := exec.Command("gh", "pr", "create", "-t", "🤖 "+title, "-b", description, "-H", branchName)
 	prCmd.Dir = repoPath
 
 	stdout := &bytes.Buffer{}
@@ -294,7 +307,7 @@ func makePullRequest(repoName string, repoPath string, repo *git.Repository) (st
 	}
 
 	if cmdErr != nil {
-		return "", fmt.Errorf("Error creating PR\nYou may need to authorize gh in a separate terminal first.\n%s\n%s", cmdErr.Error(), string(stderrBytes))
+		return "", fmt.Errorf("Error creating PR. \nEnsure you've tested gh in a separate terminal first, and then resolve the following errors: \n%s\n%s", cmdErr.Error(), string(stderrBytes))
 	}
 
 	prLinkBytes := linkRegex.Find(stdoutBytes)
