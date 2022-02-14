@@ -2,7 +2,7 @@
 
 file_name=./go.mod
 sdk_name=github.com/vendasta/event-broker/sdks/go
-sdk_version=@1.4.0
+sdk_version=@1.5.0
 sdk="$sdk_name$sdk_version"
 
 sdk_file_version() {
