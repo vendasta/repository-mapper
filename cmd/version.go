@@ -8,7 +8,8 @@ import (
 
 // Version is the version of repository-mapper
 //
-// Don't forget to tag a new version: git tag -a 0.2.0 -m "xyz feature is released in this tag"
+// Don't forget to tag a new version: git tag -a 0.2.0 -m "xyz feature released in this tag"
+// then: git push origin 0.2.0
 const Version = "0.2.0"
 
 var versionCmd = &cobra.Command{
