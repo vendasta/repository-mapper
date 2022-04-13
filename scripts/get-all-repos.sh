@@ -7,7 +7,7 @@ if [[ -z "$GITHUB_USER" ]]; then
   exit 1
 fi
 
-if [[ -z "$GITHUB_USER" ]]; then
+if [[ -z "$GITHUB_TOKEN" ]]; then
   echo "set GITHUB_TOKEN, you can create a token here:">&2
   echo "https://github.com/settings/tokens" >&2
   exit 1
