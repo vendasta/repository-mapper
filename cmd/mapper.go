@@ -165,7 +165,7 @@ func summarizeResults(allResults map[string]*runResults) {
 func saveResults(allResults map[string]*runResults) error {
 	// Ensure results dir exists
 	os.MkdirAll("./results", os.ModePerm)
-	fp := filepath.Join(".", "results", branchName+".json")
+	fp := filepath.Join(".", "results", strings.ReplaceAll(branchName, "/", "-")+".json")
 	data, err := json.Marshal(allResults)
 	if err != nil {
 		return err
