@@ -13,24 +13,24 @@
 
 ## Introduction
 
-Repository Mapper can do a lot of work for you, if you provide a script it will run it on every repository you want.
+If you provide a script Repository Mapper will run it on every repository you specify.
 
 It can help with things like:
 
 * Running structured queries on every repository, E.g.
-  - Which repositories still use 'go dep'?
-  - How many repositories still depend on X version of this package?
-  - Find me all usages of the term 'X' across all repositories
-  - Which users contribute to which repositories?
+    - Which repositories still use 'go dep'?
+    - How many repositories still depend on X version of this package?
+    - Find me all usages of the term 'X' across all repositories
+    - Which users contribute to which repositories?
 
 * Running scripts and creating pull requests on every repository. E.g.
-  - Auto upgrade X dependency in every repository
-  - Add this LICENCE file to every repository
+    - Auto upgrade X dependency in every repository
+    - Add this LICENCE file to every repository
 
 ## Installation
 
-```go
-go get github.com/vendasta/repository-mapper
+```bash
+go install github.com/vendasta/repository-mapper
 ```
 
 ## Usage
@@ -75,23 +75,30 @@ Flags:
   
 ```
 
-Pass as many repositories as you like as positional arguments. Simply provide the short-form name of the repo; e.g. 'my-repo' or 'another-repo'. The organization name will automatically be appended.
+Pass as many repositories as you like as positional arguments. Simply provide the short-form name of the repo; e.g. 'my-repo'
+or 'another-repo'. The organization name will automatically be appended.
 
 To use all recently updated repositories in the organization, see [using all repositories](#using-all-repositories).
 
 ### Auth
 
-*Note* RSA based auth does not work on Apple Laptops. To run the script on an Apple laptop you **must** add the `--user-name` and `--auth-token` flags on the commandline. It is helpful to set an environment variable for each of these in your `~/.bashrc` or `~/.zshrc` file.
+*Note* RSA based auth does not work on Apple Laptops. To run the script on an Apple laptop you **must** add
+the `--user-name` and `--auth-token` flags on the commandline. It is helpful to set an environment variable for each of
+these in your `~/.bashrc` or `~/.zshrc` file.
 
-Currently we need to use a github username and auth token to authenticate the repo mapper, to generate an auth token see [this article](https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token)
+Currently we need to use a GitHub username and auth token to authenticate the repo mapper, to generate an auth token
+see [this article](https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token)
 
 ## Script
 
-The provide script can be any executable. It will be run without any arguments at the root of each repository.
+The provided script can be any executable. It will be run without any arguments at the root of each repository.
 
-The script must be executable in order for repository-mapper to run it, eg `chmod +x myscript.sh`
+The script must be executable in order for repository-mapper to run it, e.g. `chmod +x myscript.sh`
 
-All stdout, stderr, and exit code will automatically be collected for you and will be recorded into the json file which is written after each run.
+All stdout, stderr, and exit code will automatically be collected for you and will be recorded into the json file which
+is written after each run.
+
+### Exit codes
 
 If a script returns a non-zero exit code, repository mapper will not create a commit or pull request in that repository.
 
@@ -113,15 +120,16 @@ This will result in the result object:
 
 ```json
 {
-    "repo": "my-repo",
-    "stdout": "Hello; let me get those files for you!\nfile-1.txt file2.txt",
-    "stderr": "This is what an error looks like",
-    "exit_code": 42,
-    "pull_request": ""
-  }
+  "repo": "my-repo",
+  "stdout": "Hello; let me get those files for you!\nfile-1.txt file2.txt",
+  "stderr": "This is what an error looks like",
+  "exit_code": 42,
+  "pull_request": ""
+}
 ```
 
 ## Using All Repositories
 
-If you need to simply get an up-to-date list of all active repositories in your org you can run the `get-all-repos` script in the scripts directory. 
+If you need to simply get an up-to-date list of all active repositories in your org you can run the `get-all-repos`
+script in the scripts directory.
 It lists to stdout every repo in your org edited in the last year.
