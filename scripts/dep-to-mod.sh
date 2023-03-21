@@ -3,7 +3,7 @@
 set -e
 
 repo_remainder="$(dirname "$PWD")"
-repo_prefix="github.com/${ORG:-vendasta}"
+repo_prefix="github.com/${ORG}"
 go_mod_files=$(find . -type f -not -path "*/vendor/*" -iname Gopkg.toml)
 go_mod_dirs=$(echo "$go_mod_files" | xargs -n 1 dirname)
 
@@ -23,6 +23,6 @@ if [[ -z "$go_mod_dirs" ]]; then
   exit 10
 fi
 
-for dir in $go_mod_dirs ; do
-  ( cd "$dir" && init )
+for dir in $go_mod_dirs; do
+  (cd "$dir" && init)
 done
