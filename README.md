@@ -30,7 +30,7 @@ It can help with things like:
 ## Installation
 
 ```bash
-go install github.com/vendasta/repository-mapper
+go install github.com/vendasta/repository-mapper@latest
 ```
 
 ## Usage
