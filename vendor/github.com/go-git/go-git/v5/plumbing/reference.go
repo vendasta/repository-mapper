@@ -168,22 +168,22 @@ func NewHashReference(n ReferenceName, h Hash) *Reference {
 	}
 }
 
-// Type returns the type of a reference
+// Type return the type of a reference
 func (r *Reference) Type() ReferenceType {
 	return r.t
 }
 
-// Name returns the name of a reference
+// Name return the name of a reference
 func (r *Reference) Name() ReferenceName {
 	return r.n
 }
 
-// Hash returns the hash of a hash reference
+// Hash return the hash of a hash reference
 func (r *Reference) Hash() Hash {
 	return r.h
 }
 
-// Target returns the target of a symbolic reference
+// Target return the target of a symbolic reference
 func (r *Reference) Target() ReferenceName {
 	return r.target
 }
@@ -204,21 +204,6 @@ func (r *Reference) Strings() [2]string {
 }
 
 func (r *Reference) String() string {
-	ref := ""
-	switch r.Type() {
-	case HashReference:
-		ref = r.Hash().String()
-	case SymbolicReference:
-		ref = symrefPrefix + r.Target().String()
-	default:
-		return ""
-	}
-
-	name := r.Name().String()
-	var v strings.Builder
-	v.Grow(len(ref) + len(name) + 1)
-	v.WriteString(ref)
-	v.WriteString(" ")
-	v.WriteString(name)
-	return v.String()
+	s := r.Strings()
+	return fmt.Sprintf("%s %s", s[1], s[0])
 }

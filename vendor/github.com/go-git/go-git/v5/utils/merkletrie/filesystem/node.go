@@ -61,10 +61,6 @@ func (n *node) IsDir() bool {
 	return n.isDir
 }
 
-func (n *node) Skip() bool {
-	return false
-}
-
 func (n *node) Children() ([]noder.Noder, error) {
 	if err := n.calculateChildren(); err != nil {
 		return nil, err

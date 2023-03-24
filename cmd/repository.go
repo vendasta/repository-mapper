@@ -42,9 +42,18 @@ func checkoutRepo(repoName string, repoPath string) (repo *git.Repository, err e
 		}
 		if !noFetch {
 			wt, err := repo.Worktree()
-			wt.Checkout(&git.CheckoutOptions{
-				Branch: "master",
+			if err != nil {
+				fmt.Printf("Failed to get repo handle: %s\n", err)
+				return nil, err
+			}
+			err = wt.Checkout(&git.CheckoutOptions{
+				Branch: plumbing.NewBranchReferenceName("master"),
+				Force:  true,
 			})
+			if err != nil {
+				fmt.Printf("Error checking out master: %s\n", err)
+				return nil, err
+			}
 			fmt.Printf("%s: Fetching latest master (could take a minute) ⏱\n", repoName)
 			opts := &git.FetchOptions{
 				RemoteName: "origin",
