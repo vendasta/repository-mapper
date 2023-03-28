@@ -147,6 +147,13 @@ func makePullRequest(repoName string, repoPath string, repo *git.Repository) (st
 		return "", fmt.Errorf("error getting worktree: %w", err)
 	}
 
+	st, err := wt.Status()
+	if err != nil {
+		return "", fmt.Errorf("error checking git status: %w", err)
+	}
+	if st.IsClean() {
+		return "", nil
+	}
 	// Add all changed files
 	_, err = wt.Add(".")
 	if err != nil {
