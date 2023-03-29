@@ -3,8 +3,8 @@
 - Changed:
     - If a repository is clean do not open an empty PR when `--make-pr` flag is passed
 - Fixed:
-    - Downgraded go-git dependency to 5.3.0 to fix issue where running repository-mapper on a repo that is already
-      downloaded would error
+    - When a repository exists in the directory repository-mapper stores repositories in `fetch` would error. This is
+      a [bug with go-git](https://github.com/go-git/go-git/issues/328). Downgrading to 5.3.0 seems to fix it.
 
 ## 0.3.0
 
@@ -24,4 +24,4 @@
 ## 0.1.0
 
 - Changed:
-  - Exit on failure in sub-shells
+    - Exit on failure in sub-shells
