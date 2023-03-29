@@ -9,9 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
-	"github.com/go-git/go-billy/v5"
-	"github.com/go-git/go-billy/v5/util"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/filemode"
@@ -21,7 +20,9 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/storer"
 	"github.com/go-git/go-git/v5/utils/ioutil"
 	"github.com/go-git/go-git/v5/utils/merkletrie"
-	"github.com/go-git/go-git/v5/utils/sync"
+
+	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/util"
 )
 
 var (
@@ -58,7 +59,7 @@ func (w *Worktree) Pull(o *PullOptions) error {
 // Pull only supports merges where the can be resolved as a fast-forward.
 //
 // The provided Context must be non-nil. If the context expires before the
-// operation is complete, an error is returned. The context only affects the
+// operation is complete, an error is returned. The context only affects to the
 // transport operations.
 func (w *Worktree) PullContext(ctx context.Context, o *PullOptions) error {
 	if err := o.Validate(); err != nil {
@@ -72,7 +73,6 @@ func (w *Worktree) PullContext(ctx context.Context, o *PullOptions) error {
 
 	fetchHead, err := remote.fetch(ctx, &FetchOptions{
 		RemoteName:      o.RemoteName,
-		RemoteURL:       o.RemoteURL,
 		Depth:           o.Depth,
 		Auth:            o.Auth,
 		Progress:        o.Progress,
@@ -182,10 +182,6 @@ func (w *Worktree) Checkout(opts *CheckoutOptions) error {
 		return err
 	}
 
-	if len(opts.SparseCheckoutDirectories) > 0 {
-		return w.ResetSparsely(ro, opts.SparseCheckoutDirectories)
-	}
-
 	return w.Reset(ro)
 }
 func (w *Worktree) createBranch(opts *CheckoutOptions) error {
@@ -266,7 +262,8 @@ func (w *Worktree) setHEADToBranch(branch plumbing.ReferenceName, commit plumbin
 	return w.r.Storer.SetReference(head)
 }
 
-func (w *Worktree) ResetSparsely(opts *ResetOptions, dirs []string) error {
+// Reset the worktree to a specified state.
+func (w *Worktree) Reset(opts *ResetOptions) error {
 	if err := opts.Validate(w.r); err != nil {
 		return err
 	}
@@ -296,7 +293,7 @@ func (w *Worktree) ResetSparsely(opts *ResetOptions, dirs []string) error {
 	}
 
 	if opts.Mode == MixedReset || opts.Mode == MergeReset || opts.Mode == HardReset {
-		if err := w.resetIndex(t, dirs); err != nil {
+		if err := w.resetIndex(t); err != nil {
 			return err
 		}
 	}
@@ -310,17 +307,8 @@ func (w *Worktree) ResetSparsely(opts *ResetOptions, dirs []string) error {
 	return nil
 }
 
-// Reset the worktree to a specified state.
-func (w *Worktree) Reset(opts *ResetOptions) error {
-	return w.ResetSparsely(opts, nil)
-}
-
-func (w *Worktree) resetIndex(t *object.Tree, dirs []string) error {
+func (w *Worktree) resetIndex(t *object.Tree) error {
 	idx, err := w.r.Storer.Index()
-	if len(dirs) > 0 {
-		idx.SkipUnless(dirs)
-	}
-
 	if err != nil {
 		return err
 	}
@@ -410,7 +398,7 @@ func (w *Worktree) checkoutChange(ch merkletrie.Change, t *object.Tree, idx *ind
 
 		isSubmodule = e.Mode == filemode.Submodule
 	case merkletrie.Delete:
-		return rmFileAndDirsIfEmpty(w.Filesystem, ch.From.String())
+		return rmFileAndDirIfEmpty(w.Filesystem, ch.From.String())
 	}
 
 	if isSubmodule {
@@ -532,6 +520,12 @@ func (w *Worktree) checkoutChangeRegularFile(name string,
 	return nil
 }
 
+var copyBufferPool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, 32*1024)
+	},
+}
+
 func (w *Worktree) checkoutFile(f *object.File) (err error) {
 	mode, err := f.Mode.ToOSFileMode()
 	if err != nil {
@@ -555,9 +549,9 @@ func (w *Worktree) checkoutFile(f *object.File) (err error) {
 	}
 
 	defer ioutil.CheckClose(to, &err)
-	buf := sync.GetByteSlice()
-	_, err = io.CopyBuffer(to, from, *buf)
-	sync.PutByteSlice(buf)
+	buf := copyBufferPool.Get().([]byte)
+	_, err = io.CopyBuffer(to, from, buf)
+	copyBufferPool.Put(buf)
 	return
 }
 
@@ -778,10 +772,8 @@ func (w *Worktree) doClean(status Status, opts *CleanOptions, dir string, files 
 	}
 
 	if opts.Dir && dir != "" {
-		_, err := removeDirIfEmpty(w.Filesystem, dir)
-		return err
+		return doCleanDirectories(w.Filesystem, dir)
 	}
-
 	return nil
 }
 
@@ -922,52 +914,25 @@ func findMatchInFile(file *object.File, treeName string, opts *GrepOptions) ([]G
 	return grepResults, nil
 }
 
-// will walk up the directory tree removing all encountered empty
-// directories, not just the one containing this file
-func rmFileAndDirsIfEmpty(fs billy.Filesystem, name string) error {
+func rmFileAndDirIfEmpty(fs billy.Filesystem, name string) error {
 	if err := util.RemoveAll(fs, name); err != nil {
 		return err
 	}
 
 	dir := filepath.Dir(name)
-	for {
-		removed, err := removeDirIfEmpty(fs, dir)
-		if err != nil {
-			return err
-		}
-
-		if !removed {
-			// directory was not empty and not removed,
-			// stop checking parents
-			break
-		}
-
-		// move to parent directory
-		dir = filepath.Dir(dir)
-	}
-
-	return nil
+	return doCleanDirectories(fs, dir)
 }
 
-// removeDirIfEmpty will remove the supplied directory `dir` if
-// `dir` is empty
-// returns true if the directory was removed
-func removeDirIfEmpty(fs billy.Filesystem, dir string) (bool, error) {
+// doCleanDirectories removes empty subdirs (without files)
+func doCleanDirectories(fs billy.Filesystem, dir string) error {
 	files, err := fs.ReadDir(dir)
 	if err != nil {
-		return false, err
+		return err
 	}
-
-	if len(files) > 0 {
-		return false, nil
+	if len(files) == 0 {
+		return fs.Remove(dir)
 	}
-
-	err = fs.Remove(dir)
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
+	return nil
 }
 
 type indexBuilder struct {

@@ -3,7 +3,7 @@ module github.com/vendasta/repository-mapper
 go 1.20
 
 require (
-	github.com/go-git/go-git/v5 v5.6.1
+	github.com/go-git/go-git/v5 v5.3.0
 	github.com/spf13/cobra v1.6.1
 )
 
