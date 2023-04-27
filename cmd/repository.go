@@ -47,7 +47,7 @@ func checkoutRepo(repoName, repoPath, defaultBranch string) (repo *git.Repositor
 				return nil, err
 			}
 			err = wt.Checkout(&git.CheckoutOptions{
-				Branch: plumbing.ReferenceName(defaultBranch),
+				Branch: plumbing.NewBranchReferenceName(defaultBranch),
 				Force:  true,
 			})
 			if err != nil {
