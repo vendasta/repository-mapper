@@ -32,9 +32,9 @@ It can help with things like:
 ```bash
 go install github.com/vendasta/repository-mapper@latest
 ```
-or if you wish to install from source
+or if you wish to install from source run the following command in the base directory
 ```bash
-go install .
+go install -mod=vendor
 ```
 
 Requirements:
