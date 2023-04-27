@@ -33,6 +33,9 @@ It can help with things like:
 go install github.com/vendasta/repository-mapper@latest
 ```
 
+Requirements:
+If you use the `--make-pr` or `-p` flag you'll need to install and configure git on your system as the go-git library does not support opening Pull Requests
+
 ## Usage
 
 Let's look at an example invocation to break it down.

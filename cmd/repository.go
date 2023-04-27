@@ -42,9 +42,18 @@ func checkoutRepo(repoName, repoPath, defaultBranch string) (repo *git.Repositor
 		}
 		if !noFetch {
 			wt, err := repo.Worktree()
-			wt.Checkout(&git.CheckoutOptions{
+			if err != nil {
+				fmt.Printf("Failed to get repo handle: %s\n", err)
+				return nil, err
+			}
+			err = wt.Checkout(&git.CheckoutOptions{
 				Branch: plumbing.ReferenceName(defaultBranch),
+				Force:  true,
 			})
+			if err != nil {
+				fmt.Printf("Error checking out master: %s\n", err)
+				return nil, err
+			}
 			fmt.Printf("%s: Fetching latest %s (could take a minute) ⏱\n", defaultBranch, repoName)
 			opts := &git.FetchOptions{
 				RemoteName: "origin",
@@ -140,6 +149,13 @@ func makePullRequest(repoName string, repoPath string, repo *git.Repository) (st
 		return "", fmt.Errorf("error getting worktree: %w", err)
 	}
 
+	st, err := wt.Status()
+	if err != nil {
+		return "", fmt.Errorf("error checking git status: %w", err)
+	}
+	if st.IsClean() {
+		return "", nil
+	}
 	// Add all changed files
 	_, err = wt.Add(".")
 	if err != nil {

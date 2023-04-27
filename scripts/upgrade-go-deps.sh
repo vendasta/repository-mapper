@@ -4,14 +4,14 @@
 
 go_executable=$(which go)
 if [ -z "$go_executable" ]; then
-  echo 1>&2 "Could not find a go executable, stopping"
+  echo 1>&2 "Could not find a go executable, exiting"
   exit 1
 fi
 
 # Add any dependencies you want here. E.g. deps=('github.com/go-git/go-git/v5' 'github.com/spf13/cobra')
 deps=()
 if [ -z $deps ]; then
-  echo 1>&2 "Error: No dependencies specified in script"
+  echo 1>&2 "No dependencies specified in script, exiting"
   exit 2
 fi
 found_any_deps=""

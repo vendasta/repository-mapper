@@ -403,16 +403,10 @@ func min(a, b int) int {
 	return b
 }
 
-const maxMatrixSize = 10000
-
 func buildSimilarityMatrix(srcs, dsts []*Change, renameScore int) (similarityMatrix, error) {
 	// Allocate for the worst-case scenario where every pair has a score
 	// that we need to consider. We might not need that many.
-	matrixSize := len(srcs) * len(dsts)
-	if matrixSize > maxMatrixSize {
-		matrixSize = maxMatrixSize
-	}
-	matrix := make(similarityMatrix, 0, matrixSize)
+	matrix := make(similarityMatrix, 0, len(srcs)*len(dsts))
 	srcSizes := make([]int64, len(srcs))
 	dstSizes := make([]int64, len(dsts))
 	dstTooLarge := make(map[int]bool)

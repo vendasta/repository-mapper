@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"strings"
 
 	"github.com/go-git/go-billy/v5"
@@ -13,14 +14,13 @@ import (
 )
 
 const (
-	commentPrefix   = "#"
-	coreSection     = "core"
-	excludesfile    = "excludesfile"
-	gitDir          = ".git"
-	gitignoreFile   = ".gitignore"
-	gitconfigFile   = ".gitconfig"
-	systemFile      = "/etc/gitconfig"
-	infoExcludeFile = gitDir + "/info/exclude"
+	commentPrefix = "#"
+	coreSection   = "core"
+	excludesfile  = "excludesfile"
+	gitDir        = ".git"
+	gitignoreFile = ".gitignore"
+	gitconfigFile = ".gitconfig"
+	systemFile    = "/etc/gitconfig"
 )
 
 // readIgnoreFile reads a specific git ignore file.
@@ -43,14 +43,10 @@ func readIgnoreFile(fs billy.Filesystem, path []string, ignoreFile string) (ps [
 	return
 }
 
-// ReadPatterns reads the .git/info/exclude and then the gitignore patterns
-// recursively traversing through the directory structure. The result is in
-// the ascending order of priority (last higher).
+// ReadPatterns reads gitignore patterns recursively traversing through the directory
+// structure. The result is in the ascending order of priority (last higher).
 func ReadPatterns(fs billy.Filesystem, path []string) (ps []Pattern, err error) {
-	ps, _ = readIgnoreFile(fs, path, infoExcludeFile)
-
-	subps, _ := readIgnoreFile(fs, path, gitignoreFile)
-	ps = append(ps, subps...)
+	ps, _ = readIgnoreFile(fs, path, gitignoreFile)
 
 	var fis []os.FileInfo
 	fis, err = fs.ReadDir(fs.Join(path...))
@@ -120,12 +116,12 @@ func loadPatterns(fs billy.Filesystem, path string) (ps []Pattern, err error) {
 //
 // The function assumes fs is rooted at the root filesystem.
 func LoadGlobalPatterns(fs billy.Filesystem) (ps []Pattern, err error) {
-	home, err := os.UserHomeDir()
+	usr, err := user.Current()
 	if err != nil {
 		return
 	}
 
-	return loadPatterns(fs, fs.Join(home, gitconfigFile))
+	return loadPatterns(fs, fs.Join(usr.HomeDir, gitconfigFile))
 }
 
 // LoadSystemPatterns loads gitignore patterns from from the gitignore file
