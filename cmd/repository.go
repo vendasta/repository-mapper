@@ -32,7 +32,7 @@ func initAuth() (err error) {
 	return nil
 }
 
-func checkoutRepo(repoName string, repoPath string) (repo *git.Repository, err error) {
+func checkoutRepo(repoName, repoPath, defaultBranch string) (repo *git.Repository, err error) {
 	fmt.Printf("%s: Checking out at %s\n", repoName, repoPath)
 	if isDir(repoPath) {
 		fmt.Printf("%s: Repository exists\n", repoName)
@@ -43,15 +43,15 @@ func checkoutRepo(repoName string, repoPath string) (repo *git.Repository, err e
 		if !noFetch {
 			wt, err := repo.Worktree()
 			wt.Checkout(&git.CheckoutOptions{
-				Branch: "master",
+				Branch: plumbing.ReferenceName(defaultBranch),
 			})
-			fmt.Printf("%s: Fetching latest master (could take a minute) ⏱\n", repoName)
+			fmt.Printf("%s: Fetching latest %s (could take a minute) ⏱\n", defaultBranch, repoName)
 			opts := &git.FetchOptions{
 				RemoteName: "origin",
 				Depth:      1,
 				Auth:       auth,
-				// Fetch only latest master
-				RefSpecs: []gitconfig.RefSpec{"+refs/heads/master:refs/remotes/origin/master"},
+				// Fetch only latest default branch
+				RefSpecs: []gitconfig.RefSpec{gitconfig.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/remotes/origin/%s", defaultBranch, defaultBranch))},
 			}
 			err = repo.Fetch(opts)
 			if err != nil && err != git.NoErrAlreadyUpToDate {
@@ -60,16 +60,16 @@ func checkoutRepo(repoName string, repoPath string) (repo *git.Repository, err e
 		}
 		return repo, nil
 	} else {
-		return cloneRepo(repoName, repoPath)
+		return cloneRepo(repoName, repoPath, defaultBranch)
 	}
 }
 
-func cloneRepo(repoName string, dest string) (*git.Repository, error) {
+func cloneRepo(repoName, dest, defaultBranch string) (*git.Repository, error) {
 	fmt.Printf("%s: 🧘‍♂️ Cloning (this could take a while...)\n", repoName)
 	githubRepoURL := fmt.Sprintf("https://github.com/%s/%s", org, repoName)
 	cloneOptions := &git.CloneOptions{
 		URL:           githubRepoURL,
-		ReferenceName: plumbing.NewBranchReferenceName("master"),
+		ReferenceName: plumbing.NewBranchReferenceName(defaultBranch),
 		SingleBranch:  true,
 		Depth:         1,
 		Auth:          auth,
@@ -81,13 +81,13 @@ func cloneRepo(repoName string, dest string) (*git.Repository, error) {
 	return repo, nil
 }
 
-func checkoutBranch(repoName string, repo *git.Repository) error {
+func checkoutBranch(repoName string, repo *git.Repository, defaultBranch string) error {
 	wt, err := repo.Worktree()
 	if err != nil {
 		return err
 	}
 
-	masterRef, err := repo.Reference(plumbing.NewBranchReferenceName("master"), true)
+	masterRef, err := repo.Reference(plumbing.NewBranchReferenceName(defaultBranch), true)
 	if err != nil {
 		return fmt.Errorf("error getting reference: %w", err)
 	}
@@ -103,7 +103,7 @@ func checkoutBranch(repoName string, repo *git.Repository) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("%s: Resetting branch to latest master\n", repoName)
+		fmt.Printf("%s: Resetting branch to latest %s\n", defaultBranch, repoName)
 		resetOpts := &git.ResetOptions{
 			Commit: masterRef.Hash(),
 			Mode:   git.HardReset,
@@ -133,6 +133,8 @@ func checkoutBranch(repoName string, repo *git.Repository) error {
 
 // Make a pull request
 func makePullRequest(repoName string, repoPath string, repo *git.Repository) (string, error) {
+	// sleep to make sure file system/git actually picks up changes
+	time.Sleep(200 * time.Millisecond)
 	wt, err := repo.Worktree()
 	if err != nil {
 		return "", fmt.Errorf("error getting worktree: %w", err)

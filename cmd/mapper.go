@@ -25,6 +25,7 @@ var (
 	title          string
 	description    string
 	noFetch        bool
+	defaultBranch  string
 	workspace      string
 	auth           transport.AuthMethod
 	rsaKeyFile     string
@@ -54,6 +55,7 @@ func init() {
 	rootCmd.MarkFlagRequired("branch-name")
 
 	rootCmd.Flags().StringVarP(&org, "org", "o", "", "The github organization the repos live in.")
+	rootCmd.MarkFlagRequired("org")
 
 	rootCmd.Flags().StringVarP(&script, "script", "s", "", "Path to the script to run in each repository")
 	rootCmd.MarkFlagRequired("script")
@@ -61,6 +63,7 @@ func init() {
 	rootCmd.Flags().BoolVarP(&makePr, "make-pr", "p", false, "Create a PR in each repo after running the script")
 	rootCmd.Flags().StringVarP(&title, "title", "t", "", "Title of the PR")
 	rootCmd.Flags().StringVarP(&description, "description", "d", "", "Description of the PR")
+	rootCmd.Flags().StringVar(&defaultBranch, "default-branch", "master", "(optional) Default branch to checkout when cloning/fetching, defaults to master")
 
 	defaultRSAKeyFile := filepath.Join(homeDir, ".ssh", "id_rsa")
 	rootCmd.Flags().StringVar(&rsaKeyFile, "rsa-key-file", defaultRSAKeyFile, "(optional) The location of an rsa key with github permissions, works only with linux and windows")
@@ -200,13 +203,13 @@ type runResults struct {
 // Perform all necessary tasks for a single repo
 func runRepo(repoName string) (*runResults, error) {
 	repoPath := filepath.Join(workspace, repoName)
-	repo, err := checkoutRepo(repoName, repoPath)
+	repo, err := checkoutRepo(repoName, repoPath, defaultBranch)
 	if err != nil {
 		return nil, err
 	}
 
-	// Checkout the desired branch name tracking from latest master
-	err = checkoutBranch(repoName, repo)
+	// Checkout the desired branch name tracking from latest default
+	err = checkoutBranch(repoName, repo, defaultBranch)
 	if err != nil {
 		return nil, err
 	}

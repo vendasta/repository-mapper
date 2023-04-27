@@ -10,7 +10,7 @@ import (
 //
 // Don't forget to tag a new version: git tag -a 0.2.0 -m "xyz feature released in this tag"
 // then: git push origin 0.2.0
-const Version = "0.3.0"
+const Version = "0.5.0"
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
