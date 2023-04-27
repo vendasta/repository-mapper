@@ -32,6 +32,10 @@ It can help with things like:
 ```bash
 go install github.com/vendasta/repository-mapper@latest
 ```
+or if you wish to install from source
+```bash
+go install .
+```
 
 Requirements:
 If you use the `--make-pr` or `-p` flag you'll need to install and configure git on your system as the go-git library does not support opening Pull Requests
