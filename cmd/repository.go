@@ -51,7 +51,7 @@ func checkoutRepo(repoName, repoPath, defaultBranch string) (repo *git.Repositor
 				Force:  true,
 			})
 			if err != nil {
-				fmt.Printf("Error checking out master: %s\n", err)
+				fmt.Printf("Error checking out %s: %s\n", defaultBranch, err)
 				return nil, err
 			}
 			fmt.Printf("%s: Fetching latest %s (could take a minute) ⏱\n", defaultBranch, repoName)

@@ -1,3 +1,7 @@
+## 0.5.0
+- Changed:
+  - You can now specify an optional default branch
+
 ## 0.4.0
 
 - Changed:
