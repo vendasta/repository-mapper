@@ -3,7 +3,7 @@
 - Changed:
     - You can now specify an optional default branch
     - Revert go-git downgrade so .gitignore files are respected
-        - If a repo you are running repository-mapper on exists in the `~/repository-mapper` directory it will be deleted
+        - If a repo you are running repository-mapper on exists in the `$HOME/repository-mapper` directory it will be deleted
           so your script can run successfully rather than erring out
 
 ## 0.4.0
