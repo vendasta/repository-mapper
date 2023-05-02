@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"time"
 
 	"github.com/go-git/go-git/v5"
-	gitconfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	gitobject "github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
@@ -32,53 +32,61 @@ func initAuth() (err error) {
 	return nil
 }
 
-func checkoutRepo(repoName string, repoPath string) (repo *git.Repository, err error) {
+func checkoutRepo(repoName, repoPath, defaultBranch string) (repo *git.Repository, err error) {
 	fmt.Printf("%s: Checking out at %s\n", repoName, repoPath)
 	if isDir(repoPath) {
-		fmt.Printf("%s: Repository exists\n", repoName)
-		repo, err = git.PlainOpen(repoPath)
-		if err != nil {
-			return nil, err
+		if err := os.RemoveAll(repoPath); err != nil {
+			return nil, fmt.Errorf("error deleting existing repo: %w", err)
 		}
-		if !noFetch {
-			wt, err := repo.Worktree()
-			if err != nil {
-				fmt.Printf("Failed to get repo handle: %s\n", err)
-				return nil, err
-			}
-			err = wt.Checkout(&git.CheckoutOptions{
-				Branch: plumbing.NewBranchReferenceName("master"),
-				Force:  true,
-			})
-			if err != nil {
-				fmt.Printf("Error checking out master: %s\n", err)
-				return nil, err
-			}
-			fmt.Printf("%s: Fetching latest master (could take a minute) ⏱\n", repoName)
-			opts := &git.FetchOptions{
-				RemoteName: "origin",
-				Depth:      1,
-				Auth:       auth,
-				// Fetch only latest master
-				RefSpecs: []gitconfig.RefSpec{"+refs/heads/master:refs/remotes/origin/master"},
-			}
-			err = repo.Fetch(opts)
-			if err != nil && err != git.NoErrAlreadyUpToDate {
-				return nil, fmt.Errorf("error fetching: %w", err)
-			}
-		}
-		return repo, nil
-	} else {
-		return cloneRepo(repoName, repoPath)
+
 	}
+	return cloneRepo(repoName, repoPath, defaultBranch)
+	// TODO: Uncomment the below to replace the above in the event https://github.com/go-git/go-git/issues/328 is fixed
+	//if isDir(repoPath) {
+	//	fmt.Printf("%s: Repository exists\n", repoName)
+	//	repo, err = git.PlainOpen(repoPath)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	if !noFetch {
+	//		wt, err := repo.Worktree()
+	//		if err != nil {
+	//			fmt.Printf("Failed to get repo handle: %s\n", err)
+	//			return nil, err
+	//		}
+	//		err = wt.Checkout(&git.CheckoutOptions{
+	//			Branch: plumbing.NewBranchReferenceName(defaultBranch),
+	//			Force:  true,
+	//		})
+	//		if err != nil {
+	//			fmt.Printf("Error checking out %s: %s\n", defaultBranch, err)
+	//			return nil, err
+	//		}
+	//		fmt.Printf("%s: Fetching latest %s (could take a minute) ⏱\n", defaultBranch, repoName)
+	//		opts := &git.FetchOptions{
+	//			RemoteName: "origin",
+	//			Depth:      1,
+	//			Auth:       auth,
+	//			// Fetch only latest default branch
+	//			RefSpecs: []gitconfig.RefSpec{gitconfig.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/remotes/origin/%s", defaultBranch, defaultBranch))},
+	//		}
+	//		err = repo.Fetch(opts)
+	//		if err != nil && err != git.NoErrAlreadyUpToDate {
+	//			return nil, fmt.Errorf("error fetching: %w", err)
+	//		}
+	//	}
+	//	return repo, nil
+	//} else {
+	//	return cloneRepo(repoName, repoPath, defaultBranch)
+	//}
 }
 
-func cloneRepo(repoName string, dest string) (*git.Repository, error) {
+func cloneRepo(repoName, dest, defaultBranch string) (*git.Repository, error) {
 	fmt.Printf("%s: 🧘‍♂️ Cloning (this could take a while...)\n", repoName)
 	githubRepoURL := fmt.Sprintf("https://github.com/%s/%s", org, repoName)
 	cloneOptions := &git.CloneOptions{
 		URL:           githubRepoURL,
-		ReferenceName: plumbing.NewBranchReferenceName("master"),
+		ReferenceName: plumbing.NewBranchReferenceName(defaultBranch),
 		SingleBranch:  true,
 		Depth:         1,
 		Auth:          auth,
@@ -90,13 +98,13 @@ func cloneRepo(repoName string, dest string) (*git.Repository, error) {
 	return repo, nil
 }
 
-func checkoutBranch(repoName string, repo *git.Repository) error {
+func checkoutBranch(repoName string, repo *git.Repository, defaultBranch string) error {
 	wt, err := repo.Worktree()
 	if err != nil {
 		return err
 	}
 
-	masterRef, err := repo.Reference(plumbing.NewBranchReferenceName("master"), true)
+	masterRef, err := repo.Reference(plumbing.NewBranchReferenceName(defaultBranch), true)
 	if err != nil {
 		return fmt.Errorf("error getting reference: %w", err)
 	}
@@ -112,7 +120,7 @@ func checkoutBranch(repoName string, repo *git.Repository) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("%s: Resetting branch to latest master\n", repoName)
+		fmt.Printf("%s: Resetting branch to latest %s\n", defaultBranch, repoName)
 		resetOpts := &git.ResetOptions{
 			Commit: masterRef.Hash(),
 			Mode:   git.HardReset,
@@ -155,20 +163,22 @@ func makePullRequest(repoName string, repoPath string, repo *git.Repository) (st
 		return "", nil
 	}
 	// Add all changed files
-	_, err = wt.Add(".")
+	err = wt.AddWithOptions(&git.AddOptions{
+		All: true,
+	})
 	if err != nil {
 		return "", fmt.Errorf("error adding changes: %w", err)
 	}
 
-	commiter := &gitobject.Signature{
+	committer := &gitobject.Signature{
 		Name:  gitAuthor,
 		Email: gitAuthorEmail,
 		When:  time.Now().UTC(),
 	}
 	// Commit changes
 	commitOpts := &git.CommitOptions{
-		Author:    commiter,
-		Committer: commiter,
+		Author:    committer,
+		Committer: committer,
 	}
 	fmt.Printf("%s: 📝 Committing Changes\n", repoName)
 	_, err = wt.Commit(title, commitOpts)

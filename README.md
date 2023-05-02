@@ -32,6 +32,10 @@ It can help with things like:
 ```bash
 go install github.com/vendasta/repository-mapper@latest
 ```
+or if you wish to install from source run the following command in the base directory
+```bash
+go install -mod=vendor
+```
 
 Requirements:
 If you use the `--make-pr` or `-p` flag you'll need to install and configure git on your system as the go-git library does not support opening Pull Requests
@@ -69,13 +73,13 @@ Flags:
   -d, --description string        Description of the PR
   -h, --help                      help for repository-mapper
   -p, --make-pr                   Create a PR in each repo after running the script
-  -o, --org string                The github organization the repos live in. (default "vendasta")
+  -o, --org string                The github organization the repos live in.
       --rsa-key-file string       (optional) The location of an rsa key with github permissions, note this doesn't work currently (default "/Users/jbaxter/.ssh/id_rsa")
       --rsa-key-password string   (optional) The password for your ssh key if you have one configured, note this doesn't work currently
   -s, --script string             Path to the script to run in each repository
   -t, --title string              Title of the PR
       --user-name string          Github user name
-  
+      --default-branch            (optional) Default branch to checkout when cloning/fetching. (default "master")
 ```
 
 Pass as many repositories as you like as positional arguments. Simply provide the short-form name of the repo; e.g. 'my-repo'
