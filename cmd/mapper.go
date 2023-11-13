@@ -290,7 +290,7 @@ func validateArgs() error {
 	if makePr {
 		_, err := exec.LookPath("gh")
 		if err != nil {
-			return fmt.Errorf("The github cli is required to make a pull request. Please run:\nbrew install github/gh/gh")
+			return fmt.Errorf("The github cli is required to make a pull request. Please run:\nbrew install gh")
 		}
 		if title == "" {
 			return fmt.Errorf("A PR title is required. Pass one with -t")
