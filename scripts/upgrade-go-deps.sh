@@ -10,7 +10,7 @@ fi
 
 # Add any dependencies you want here. E.g. deps=('github.com/go-git/go-git/v5' 'github.com/spf13/cobra')
 deps=()
-if [ -z $deps ]; then
+if [ ${#deps[@]} -eq 0 ]; then
   echo 1>&2 "No dependencies specified in script, exiting"
   exit 2
 fi
@@ -22,7 +22,7 @@ go_mod_dirs=$(echo "$go_mod_files" | xargs -n 1 dirname)
 upgrade_deps() {
   found_this_dep=""
   # only upgrade if the module has the dependency
-  for dep in $deps; do
+  for dep in "${deps[@]}"; do
     if grep -e "\s$dep\s" "go.mod"; then
       found_this_dep="yes"
       go get "$dep"
@@ -30,9 +30,7 @@ upgrade_deps() {
   done
 
   if [[ "$found_this_dep" = "yes" ]]; then
-    if [[ -z $(grep "go 1\.2[[:digit:]]" go.mod) ]]; then
-      go mod tidy
-    fi
+    go mod tidy
     go mod vendor
     return 20
   fi

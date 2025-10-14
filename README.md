@@ -140,3 +140,9 @@ This will result in the result object:
 If you need to simply get an up-to-date list of all active repositories in your org you can run the `get-all-repos`
 script in the scripts directory.
 It lists to stdout every repo in your org edited in the last year.
+
+## Pre-made Scripts
+- `upgrade-go-deps.sh`: Updates provided Go dependencies to their latest versions
+- `get-all-repos.sh`: Lists all repositories in the organization that have been updated in the past year
+- `get-contributors.sh`: Lists all contributors to the repository
+- `dep-to-mod.sh`: Converts a Go project from using `dep` to `go mod`
