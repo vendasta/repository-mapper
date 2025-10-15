@@ -18,14 +18,14 @@ If you provide a script Repository Mapper will run it on every repository you sp
 It can help with things like:
 
 * Running structured queries on every repository, E.g.
-    - Which repositories still use 'go dep'?
-    - How many repositories still depend on X version of this package?
-    - Find me all usages of the term 'X' across all repositories
-    - Which users contribute to which repositories?
+  - Which repositories still use 'go dep'?
+  - How many repositories still depend on X version of this package?
+  - Find me all usages of the term 'X' across all repositories
+  - Which users contribute to which repositories?
 
 * Running scripts and creating pull requests on every repository. E.g.
-    - Auto upgrade X dependency in every repository
-    - Add this LICENCE file to every repository
+  - Auto upgrade X dependency in every repository
+  - Add this LICENCE file to every repository
 
 ## Installation
 
@@ -38,7 +38,11 @@ go install -mod=vendor
 ```
 
 Requirements:
-If you use the `--make-pr` or `-p` flag you'll need to install and configure git on your system as the go-git library does not support opening Pull Requests
+If you use the `--make-pr` or `-p` flag you'll need to install and configure git on your system as the go-git library does not support opening Pull Requests.
+You will need to install the GitHub CLI to create pull requests from the command line.
+```shell
+brew install gh
+```
 
 ## Usage
 
@@ -134,6 +138,11 @@ This will result in the result object:
   "pull_request": ""
 }
 ```
+
+## Cloned repositories
+Cloned repositories are stored in the `repository-mapper` folder in your home directory `~/repository-mapper` by default.
+This directory will be created if it does not exist.
+When you're done, you can go to this directory to delete the cloned repositories to save some disk space.
 
 ## Using All Repositories
 
